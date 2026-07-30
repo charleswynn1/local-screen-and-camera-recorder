@@ -58,6 +58,7 @@ final class AppModel: ObservableObject {
         return arguments.contains("--ui-testing-ready")
             || arguments.contains("--ui-testing-unready")
             || arguments.contains("--ui-testing-recording-controller")
+            || arguments.contains("--ui-testing-selecting")
 #else
         return false
 #endif
@@ -133,7 +134,7 @@ final class AppModel: ObservableObject {
         guard !hasBootstrapped else { return }
         hasBootstrapped = true
 #if DEBUG
-        if bootstrapForUITestingIfNeeded() {
+        if await bootstrapForUITestingIfNeeded() {
             return
         }
 #endif
@@ -161,6 +162,10 @@ final class AppModel: ObservableObject {
 
     func selectMode(_ mode: CaptureMode) {
         guard configuration.mode != mode else { return }
+        if snapshot.phase == .selecting {
+            picker.cancelPending()
+            Task { await engine.endSelection() }
+        }
         configuration.applyDefaults(for: mode)
         if mode.needsCamera, configuration.cameraDeviceID == nil {
             configuration.cameraDeviceID = cameras.first?.id
@@ -268,18 +273,34 @@ final class AppModel: ObservableObject {
 
     func requestPermission(_ kind: PermissionKind) async {
         errorMessage = nil
+        let currentStatus = PrivacySettingsLink.resolvedStatus(
+            system: PermissionService.status(for: kind),
+            cached: permissions[kind]
+        )
+        permissions[kind] = currentStatus
+
+        switch PrivacySettingsLink.grantAction(for: currentStatus) {
+        case .openSettings:
+            openPrivacySettings(for: kind)
+            return
+        case .none:
+            await updateCameraPreview()
+            return
+        case .request:
+            break
+        }
+
         let granted = await PermissionService.request(kind)
         permissions[kind] = granted ? .authorized : .denied
         if !granted {
             errorMessage = "\(kind.title) access was not granted. You can enable it in System Settings → Privacy & Security."
+            openPrivacySettings(for: kind)
         }
         await updateCameraPreview()
     }
 
-    func openPrivacySettings() {
-        guard let url = URL(
-            string: "x-apple.systempreferences:com.apple.preference.security?Privacy"
-        ) else { return }
+    func openPrivacySettings(for kind: PermissionKind? = nil) {
+        let url = kind.map(PrivacySettingsLink.url(for:)) ?? PrivacySettingsLink.root
         NSWorkspace.shared.open(url)
     }
 
@@ -591,10 +612,10 @@ final class AppModel: ObservableObject {
 
     private func refreshPermissions() {
         for kind in PermissionKind.allCases {
-            let current = PermissionService.status(for: kind)
-            if current == .authorized || permissions[kind] != .denied {
-                permissions[kind] = current
-            }
+            permissions[kind] = PrivacySettingsLink.resolvedStatus(
+                system: PermissionService.status(for: kind),
+                cached: permissions[kind]
+            )
         }
     }
 
@@ -822,18 +843,20 @@ final class AppModel: ObservableObject {
     }
 
 #if DEBUG
-    private func bootstrapForUITestingIfNeeded() -> Bool {
+    private func bootstrapForUITestingIfNeeded() async -> Bool {
         let arguments = ProcessInfo.processInfo.arguments
         let isControllerTest = arguments.contains(
             "--ui-testing-recording-controller"
         )
+        let isSelecting = arguments.contains("--ui-testing-selecting")
         let isReady = arguments.contains("--ui-testing-ready")
             || isControllerTest
+            || isSelecting
         let isUnready = arguments.contains("--ui-testing-unready")
         guard isReady || isUnready else { return false }
 
         configuration = RecordingConfiguration(
-            mode: .camera,
+            mode: isSelecting ? .screen : .camera,
             cameraDeviceID: "ui-test-camera",
             microphoneDeviceID: "ui-test-microphone",
             capturesSystemAudio: false,
@@ -920,6 +943,10 @@ final class AppModel: ObservableObject {
             elapsedSeconds = 7
             isRecordingCameraPreviewVisible = true
             controllerWindow.show(model: self)
+        }
+        if isSelecting {
+            await engine.beginSelection()
+            snapshot = await engine.currentSnapshot()
         }
         return true
     }

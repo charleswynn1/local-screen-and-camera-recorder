@@ -74,6 +74,31 @@ final class LocalRecorderUITests: XCTestCase {
     }
 
     @MainActor
+    func testSwitchingModesCancelsPendingScreenSelection() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-selecting"
+        ]
+        app.launch()
+
+        let recordButton = app.buttons["Start Recording"]
+        XCTAssertTrue(recordButton.waitForExistence(timeout: 5))
+        XCTAssertFalse(recordButton.isEnabled)
+
+        app.buttons["Camera Only"].click()
+
+        let enabled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "enabled == true"),
+            object: recordButton
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [enabled], timeout: 2),
+            .completed
+        )
+    }
+
+    @MainActor
     func testLibraryActionsAreDiscoverable() throws {
         let app = XCUIApplication()
         app.launchArguments = [

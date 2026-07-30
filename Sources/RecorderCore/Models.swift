@@ -469,6 +469,53 @@ public enum PermissionStatus: String, Sendable {
     case restricted
 }
 
+public enum PermissionGrantAction: Equatable, Sendable {
+    case request
+    case openSettings
+    case none
+}
+
+public enum PrivacySettingsLink {
+    public static let root = URL(
+        string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension"
+    )!
+
+    public static func url(for kind: PermissionKind) -> URL {
+        let anchor = switch kind {
+        case .screen:
+            "Privacy_ScreenCapture"
+        case .camera:
+            "Privacy_Camera"
+        case .microphone:
+            "Privacy_Microphone"
+        }
+        return URL(
+            string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?\(anchor)"
+        )!
+    }
+
+    public static func grantAction(for status: PermissionStatus) -> PermissionGrantAction {
+        switch status {
+        case .notDetermined:
+            .request
+        case .denied, .restricted:
+            .openSettings
+        case .authorized:
+            .none
+        }
+    }
+
+    public static func resolvedStatus(
+        system: PermissionStatus,
+        cached: PermissionStatus?
+    ) -> PermissionStatus {
+        if system == .authorized || cached != .denied {
+            return system
+        }
+        return .denied
+    }
+}
+
 public struct RecordingRequest: @unchecked Sendable {
     public let configuration: RecordingConfiguration
     public let screenTarget: ScreenCaptureTarget?

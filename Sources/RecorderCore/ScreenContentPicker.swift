@@ -39,16 +39,14 @@ public final class ScreenContentPicker: NSObject, @preconcurrency SCContentShari
     }
 
     public func cancelPending() {
-        continuation?.resume(throwing: RecorderError.cancelled)
-        continuation = nil
+        finish(.failure(RecorderError.cancelled))
     }
 
     public func contentSharingPicker(
         _ picker: SCContentSharingPicker,
         didCancelFor stream: SCStream?
     ) {
-        continuation?.resume(throwing: RecorderError.cancelled)
-        continuation = nil
+        finish(.failure(RecorderError.cancelled))
     }
 
     public func contentSharingPicker(
@@ -102,8 +100,14 @@ public final class ScreenContentPicker: NSObject, @preconcurrency SCContentShari
                 name: screen?.localizedName ?? "Selected Display"
             )
         }
-        continuation?.resume(returning: ScreenCaptureTarget(filter: filter, selection: selection))
-        continuation = nil
+        finish(
+            .success(
+                ScreenCaptureTarget(
+                    filter: filter,
+                    selection: selection
+                )
+            )
+        )
     }
 
     private func matchingScreen(for filter: SCContentFilter) -> NSScreen? {
@@ -133,7 +137,13 @@ public final class ScreenContentPicker: NSObject, @preconcurrency SCContentShari
     }
 
     public func contentSharingPickerStartDidFailWithError(_ error: any Error) {
-        continuation?.resume(throwing: error)
-        continuation = nil
+        finish(.failure(error))
+    }
+
+    private func finish(_ result: Result<ScreenCaptureTarget, Error>) {
+        let continuation = self.continuation
+        self.continuation = nil
+        picker.isActive = false
+        continuation?.resume(with: result)
     }
 }

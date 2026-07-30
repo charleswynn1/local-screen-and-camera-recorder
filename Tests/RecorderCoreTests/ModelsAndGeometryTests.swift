@@ -11,6 +11,46 @@ extension RecorderCoreTestPlan {
 @Suite("Models and geometry")
 struct ModelsAndGeometryTests {
     @Test
+    func permissionGrantRoutesFirstRequestAndDeniedRecoveryDifferently() {
+        #expect(PrivacySettingsLink.grantAction(for: .notDetermined) == .request)
+        #expect(PrivacySettingsLink.grantAction(for: .denied) == .openSettings)
+        #expect(PrivacySettingsLink.grantAction(for: .restricted) == .openSettings)
+        #expect(PrivacySettingsLink.grantAction(for: .authorized) == .none)
+        #expect(
+            PrivacySettingsLink.resolvedStatus(
+                system: .notDetermined,
+                cached: .denied
+            ) == .denied
+        )
+        #expect(
+            PrivacySettingsLink.resolvedStatus(
+                system: .authorized,
+                cached: .denied
+            ) == .authorized
+        )
+    }
+
+    @Test
+    func privacySettingsLinksTargetEachPermissionToggle() {
+        #expect(
+            PrivacySettingsLink.root.absoluteString
+                == "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension"
+        )
+        #expect(
+            PrivacySettingsLink.url(for: .screen).absoluteString
+                == "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"
+        )
+        #expect(
+            PrivacySettingsLink.url(for: .camera).absoluteString
+                == "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Camera"
+        )
+        #expect(
+            PrivacySettingsLink.url(for: .microphone).absoluteString
+                == "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone"
+        )
+    }
+
+    @Test
     func captureSessionCommitsConfigurationBeforeStarting() {
         let session = CaptureSessionLifecycleSpy()
 
