@@ -204,6 +204,7 @@ struct RecordView: View {
                             level: model.microphoneLevel
                         )
                     }
+                    .accessibilityIdentifier("microphone-toggle")
                     if model.configuration.mode.needsScreen {
                         Toggle("Show cursor", isOn: $model.configuration.showsCursor)
                         Toggle(

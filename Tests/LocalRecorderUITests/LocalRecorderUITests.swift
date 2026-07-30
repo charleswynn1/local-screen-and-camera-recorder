@@ -55,8 +55,12 @@ final class LocalRecorderUITests: XCTestCase {
         let recordButton = app.buttons["Start Recording"]
         XCTAssertTrue(recordButton.waitForExistence(timeout: 5))
         XCTAssertTrue(recordButton.isEnabled)
-        XCTAssertTrue(app.switches["Microphone"].exists)
-        XCTAssertTrue(app.popUpButtons["quality-picker"].exists)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["microphone-toggle"].exists
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["quality-picker"].exists
+        )
 
         app.buttons["Screen Only"].click()
         XCTAssertFalse(recordButton.isEnabled)
