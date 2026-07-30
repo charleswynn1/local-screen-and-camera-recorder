@@ -5,6 +5,7 @@ final class LocalRecorderUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    @MainActor
     func testPrimaryNavigationAndModeChoicesAreDiscoverable() throws {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -26,6 +27,7 @@ final class LocalRecorderUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Privacy"].waitForExistence(timeout: 2))
     }
 
+    @MainActor
     func testRecordingIsDisabledBeforeRequiredSetup() throws {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -41,6 +43,7 @@ final class LocalRecorderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Grant Access"].exists)
     }
 
+    @MainActor
     func testModeSwitchingAndReadyStateControls() throws {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -66,6 +69,7 @@ final class LocalRecorderUITests: XCTestCase {
         XCTAssertFalse(recordButton.isEnabled)
     }
 
+    @MainActor
     func testLibraryActionsAreDiscoverable() throws {
         let app = XCUIApplication()
         app.launchArguments = [
