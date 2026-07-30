@@ -1,0 +1,739 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D10000000000000000000001 /* AVCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* AVCaptureService.swift */; };
+		D10000000000000000000002 /* AssetRecordingWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* AssetRecordingWriter.swift */; };
+		D10000000000000000000003 /* DeviceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* DeviceCatalog.swift */; };
+		D10000000000000000000004 /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* Geometry.swift */; };
+		D10000000000000000000005 /* InterruptedRecordingRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* InterruptedRecordingRecovery.swift */; };
+		D10000000000000000000006 /* LiveRecordingPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* LiveRecordingPipeline.swift */; };
+		D10000000000000000000007 /* LocalRecordingLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* LocalRecordingLibrary.swift */; };
+		D10000000000000000000008 /* MetalVideoCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* MetalVideoCompositor.swift */; };
+		D10000000000000000000009 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* Models.swift */; };
+		D1000000000000000000000A /* PCMAudioMixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* PCMAudioMixer.swift */; };
+		D1000000000000000000000B /* Protocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* Protocols.swift */; };
+		D1000000000000000000000C /* RecordingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* RecordingEngine.swift */; };
+		D1000000000000000000000D /* RecordingFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* RecordingFolderStore.swift */; };
+		D1000000000000000000000E /* ScreenCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000E /* ScreenCaptureService.swift */; };
+		D1000000000000000000000F /* ScreenCaptureTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* ScreenCaptureTarget.swift */; };
+		D10000000000000000000010 /* ScreenContentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* ScreenContentPicker.swift */; };
+		D10000000000000000000011 /* ScreenPreviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* ScreenPreviewService.swift */; };
+		D10000000000000000000012 /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* Timeline.swift */; };
+		D20000000000000000000001 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* AppModel.swift */; };
+		D20000000000000000000002 /* CameraPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* CameraPreviewController.swift */; };
+		D20000000000000000000003 /* GlobalHotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* GlobalHotKeyManager.swift */; };
+		D20000000000000000000004 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* LibraryView.swift */; };
+		D20000000000000000000005 /* LocalRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* LocalRecorderApp.swift */; };
+		D20000000000000000000006 /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* RecordView.swift */; };
+		D20000000000000000000007 /* RecordingControllerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* RecordingControllerWindow.swift */; };
+		D20000000000000000000008 /* RegionSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* RegionSelectionController.swift */; };
+		D20000000000000000000009 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000009 /* RootView.swift */; };
+		D2000000000000000000000A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000000000000000000000A /* SettingsView.swift */; };
+		D30000000000000000000001 /* AssetWriterIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000001 /* AssetWriterIntegrationTests.swift */; };
+		D30000000000000000000002 /* ModelsAndGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* ModelsAndGeometryTests.swift */; };
+		D30000000000000000000003 /* RecordingEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000003 /* RecordingEngineTests.swift */; };
+		D40000000000000000000001 /* LocalRecorderUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000001 /* LocalRecorderUITests.swift */; };
+		D50000000000000000000001 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000001 /* Accelerate.framework */; };
+		D50000000000000000000002 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000002 /* AppKit.framework */; };
+		D50000000000000000000003 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000003 /* AVFoundation.framework */; };
+		D50000000000000000000004 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000004 /* CoreImage.framework */; };
+		D50000000000000000000005 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000005 /* CoreMedia.framework */; };
+		D50000000000000000000006 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000006 /* Metal.framework */; };
+		D50000000000000000000007 /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000007 /* ScreenCaptureKit.framework */; };
+		D50000000000000000000008 /* RecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* RecorderCore.framework */; };
+		D50000000000000000000009 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000008 /* SwiftUI.framework */; };
+		D5000000000000000000000A /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* AVKit.framework */; };
+		D5000000000000000000000B /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000A /* Carbon.framework */; };
+		D5000000000000000000000C /* RecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* RecorderCore.framework */; };
+		D5000000000000000000000D /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* XCTest.framework */; };
+		D5000000000000000000000E /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000C /* VideoToolbox.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		900000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400000000000000000000001;
+			remoteInfo = RecorderCore;
+		};
+		900000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400000000000000000000001;
+			remoteInfo = RecorderCore;
+		};
+		900000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400000000000000000000002;
+			remoteInfo = LocalRecorder;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* Local Recorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Local Recorder.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000002 /* RecorderCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RecorderCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000003 /* RecorderCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RecorderCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000004 /* LocalRecorderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocalRecorderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000001 /* AVCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVCaptureService.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* AssetRecordingWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetRecordingWriter.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* DeviceCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCatalog.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* InterruptedRecordingRecovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterruptedRecordingRecovery.swift; sourceTree = "<group>"; };
+		B10000000000000000000006 /* LiveRecordingPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRecordingPipeline.swift; sourceTree = "<group>"; };
+		B10000000000000000000007 /* LocalRecordingLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRecordingLibrary.swift; sourceTree = "<group>"; };
+		B10000000000000000000008 /* MetalVideoCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalVideoCompositor.swift; sourceTree = "<group>"; };
+		B10000000000000000000009 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B1000000000000000000000A /* PCMAudioMixer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PCMAudioMixer.swift; sourceTree = "<group>"; };
+		B1000000000000000000000B /* Protocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocols.swift; sourceTree = "<group>"; };
+		B1000000000000000000000C /* RecordingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingEngine.swift; sourceTree = "<group>"; };
+		B1000000000000000000000D /* RecordingFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingFolderStore.swift; sourceTree = "<group>"; };
+		B1000000000000000000000E /* ScreenCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureService.swift; sourceTree = "<group>"; };
+		B1000000000000000000000F /* ScreenCaptureTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureTarget.swift; sourceTree = "<group>"; };
+		B10000000000000000000010 /* ScreenContentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenContentPicker.swift; sourceTree = "<group>"; };
+		B10000000000000000000011 /* ScreenPreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPreviewService.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
+		B20000000000000000000001 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* CameraPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewController.swift; sourceTree = "<group>"; };
+		B20000000000000000000003 /* GlobalHotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKeyManager.swift; sourceTree = "<group>"; };
+		B20000000000000000000004 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		B20000000000000000000005 /* LocalRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRecorderApp.swift; sourceTree = "<group>"; };
+		B20000000000000000000006 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
+		B20000000000000000000007 /* RecordingControllerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingControllerWindow.swift; sourceTree = "<group>"; };
+		B20000000000000000000008 /* RegionSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionController.swift; sourceTree = "<group>"; };
+		B20000000000000000000009 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B2000000000000000000000A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B30000000000000000000001 /* AssetWriterIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetWriterIntegrationTests.swift; sourceTree = "<group>"; };
+		B30000000000000000000002 /* ModelsAndGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsAndGeometryTests.swift; sourceTree = "<group>"; };
+		B30000000000000000000003 /* RecordingEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingEngineTests.swift; sourceTree = "<group>"; };
+		B40000000000000000000001 /* LocalRecorderUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRecorderUITests.swift; sourceTree = "<group>"; };
+		B50000000000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B50000000000000000000002 /* LocalRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LocalRecorder.entitlements; sourceTree = "<group>"; };
+		B50000000000000000000003 /* ExportOptions.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ExportOptions.plist; sourceTree = "<group>"; };
+		C00000000000000000000001 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		C00000000000000000000002 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		C00000000000000000000003 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		C00000000000000000000004 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
+		C00000000000000000000005 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		C00000000000000000000006 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		C00000000000000000000007 /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
+		C00000000000000000000008 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C00000000000000000000009 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		C0000000000000000000000A /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
+		C0000000000000000000000B /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		C0000000000000000000000C /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		500000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D50000000000000000000001 /* Accelerate.framework in Frameworks */,
+				D50000000000000000000002 /* AppKit.framework in Frameworks */,
+				D50000000000000000000003 /* AVFoundation.framework in Frameworks */,
+				D50000000000000000000004 /* CoreImage.framework in Frameworks */,
+				D50000000000000000000005 /* CoreMedia.framework in Frameworks */,
+				D50000000000000000000006 /* Metal.framework in Frameworks */,
+				D50000000000000000000007 /* ScreenCaptureKit.framework in Frameworks */,
+				D5000000000000000000000E /* VideoToolbox.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		500000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D50000000000000000000008 /* RecorderCore.framework in Frameworks */,
+				D50000000000000000000009 /* SwiftUI.framework in Frameworks */,
+				D5000000000000000000000A /* AVKit.framework in Frameworks */,
+				D5000000000000000000000B /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		500000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5000000000000000000000C /* RecorderCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		500000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5000000000000000000000D /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000003 /* Sources */,
+				100000000000000000000006 /* Tests */,
+				10000000000000000000000A /* LocalRecorder */,
+				100000000000000000000009 /* Config */,
+				10000000000000000000000B /* Frameworks */,
+				100000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		100000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* Local Recorder.app */,
+				B00000000000000000000002 /* RecorderCore.framework */,
+				B00000000000000000000003 /* RecorderCoreTests.xctest */,
+				B00000000000000000000004 /* LocalRecorderUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		100000000000000000000003 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000004 /* RecorderCore */,
+				100000000000000000000005 /* LocalRecorderApp */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		100000000000000000000004 /* RecorderCore */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000001 /* AVCaptureService.swift */,
+				B10000000000000000000002 /* AssetRecordingWriter.swift */,
+				B10000000000000000000003 /* DeviceCatalog.swift */,
+				B10000000000000000000004 /* Geometry.swift */,
+				B10000000000000000000005 /* InterruptedRecordingRecovery.swift */,
+				B10000000000000000000006 /* LiveRecordingPipeline.swift */,
+				B10000000000000000000007 /* LocalRecordingLibrary.swift */,
+				B10000000000000000000008 /* MetalVideoCompositor.swift */,
+				B10000000000000000000009 /* Models.swift */,
+				B1000000000000000000000A /* PCMAudioMixer.swift */,
+				B1000000000000000000000B /* Protocols.swift */,
+				B1000000000000000000000C /* RecordingEngine.swift */,
+				B1000000000000000000000D /* RecordingFolderStore.swift */,
+				B1000000000000000000000E /* ScreenCaptureService.swift */,
+				B1000000000000000000000F /* ScreenCaptureTarget.swift */,
+				B10000000000000000000010 /* ScreenContentPicker.swift */,
+				B10000000000000000000011 /* ScreenPreviewService.swift */,
+				B10000000000000000000012 /* Timeline.swift */,
+			);
+			path = RecorderCore;
+			sourceTree = "<group>";
+		};
+		100000000000000000000005 /* LocalRecorderApp */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000001 /* AppModel.swift */,
+				B20000000000000000000002 /* CameraPreviewController.swift */,
+				B20000000000000000000003 /* GlobalHotKeyManager.swift */,
+				B20000000000000000000004 /* LibraryView.swift */,
+				B20000000000000000000005 /* LocalRecorderApp.swift */,
+				B20000000000000000000006 /* RecordView.swift */,
+				B20000000000000000000007 /* RecordingControllerWindow.swift */,
+				B20000000000000000000008 /* RegionSelectionController.swift */,
+				B20000000000000000000009 /* RootView.swift */,
+				B2000000000000000000000A /* SettingsView.swift */,
+			);
+			path = LocalRecorderApp;
+			sourceTree = "<group>";
+		};
+		100000000000000000000006 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000007 /* RecorderCoreTests */,
+				100000000000000000000008 /* LocalRecorderUITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		100000000000000000000007 /* RecorderCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				B30000000000000000000001 /* AssetWriterIntegrationTests.swift */,
+				B30000000000000000000002 /* ModelsAndGeometryTests.swift */,
+				B30000000000000000000003 /* RecordingEngineTests.swift */,
+			);
+			path = RecorderCoreTests;
+			sourceTree = "<group>";
+		};
+		100000000000000000000008 /* LocalRecorderUITests */ = {
+			isa = PBXGroup;
+			children = (
+				B40000000000000000000001 /* LocalRecorderUITests.swift */,
+			);
+			path = LocalRecorderUITests;
+			sourceTree = "<group>";
+		};
+		100000000000000000000009 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B50000000000000000000003 /* ExportOptions.plist */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		10000000000000000000000A /* LocalRecorder */ = {
+			isa = PBXGroup;
+			children = (
+				B50000000000000000000001 /* Info.plist */,
+				B50000000000000000000002 /* LocalRecorder.entitlements */,
+			);
+			path = LocalRecorder;
+			sourceTree = "<group>";
+		};
+		10000000000000000000000B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000001 /* Accelerate.framework */,
+				C00000000000000000000002 /* AppKit.framework */,
+				C00000000000000000000003 /* AVFoundation.framework */,
+				C00000000000000000000009 /* AVKit.framework */,
+				C0000000000000000000000A /* Carbon.framework */,
+				C00000000000000000000004 /* CoreImage.framework */,
+				C00000000000000000000005 /* CoreMedia.framework */,
+				C00000000000000000000006 /* Metal.framework */,
+				C00000000000000000000007 /* ScreenCaptureKit.framework */,
+				C00000000000000000000008 /* SwiftUI.framework */,
+				C0000000000000000000000C /* VideoToolbox.framework */,
+				C0000000000000000000000B /* XCTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		400000000000000000000001 /* RecorderCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000002 /* Build configuration list for PBXNativeTarget "RecorderCore" */;
+			buildPhases = (
+				600000000000000000000001 /* Sources */,
+				500000000000000000000001 /* Frameworks */,
+				650000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RecorderCore;
+			productName = RecorderCore;
+			productReference = B00000000000000000000002 /* RecorderCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		400000000000000000000002 /* LocalRecorder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000003 /* Build configuration list for PBXNativeTarget "LocalRecorder" */;
+			buildPhases = (
+				600000000000000000000002 /* Sources */,
+				500000000000000000000002 /* Frameworks */,
+				650000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				800000000000000000000001 /* PBXTargetDependency */,
+			);
+			name = LocalRecorder;
+			productName = "Local Recorder";
+			productReference = B00000000000000000000001 /* Local Recorder.app */;
+			productType = "com.apple.product-type.application";
+		};
+		400000000000000000000003 /* RecorderCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000004 /* Build configuration list for PBXNativeTarget "RecorderCoreTests" */;
+			buildPhases = (
+				600000000000000000000003 /* Sources */,
+				500000000000000000000003 /* Frameworks */,
+				650000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				800000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = RecorderCoreTests;
+			productName = RecorderCoreTests;
+			productReference = B00000000000000000000003 /* RecorderCoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		400000000000000000000004 /* LocalRecorderUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000005 /* Build configuration list for PBXNativeTarget "LocalRecorderUITests" */;
+			buildPhases = (
+				600000000000000000000004 /* Sources */,
+				500000000000000000000004 /* Frameworks */,
+				650000000000000000000004 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				800000000000000000000003 /* PBXTargetDependency */,
+			);
+			name = LocalRecorderUITests;
+			productName = LocalRecorderUITests;
+			productReference = B00000000000000000000004 /* LocalRecorderUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					400000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					400000000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					400000000000000000000003 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					400000000000000000000004 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 400000000000000000000002;
+					};
+				};
+			};
+			buildConfigurationList = 700000000000000000000001 /* Build configuration list for PBXProject "LocalRecorder" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 100000000000000000000001;
+			productRefGroup = 100000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				400000000000000000000001 /* RecorderCore */,
+				400000000000000000000002 /* LocalRecorder */,
+				400000000000000000000003 /* RecorderCoreTests */,
+				400000000000000000000004 /* LocalRecorderUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		650000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		650000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		650000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		650000000000000000000004 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		600000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D10000000000000000000001 /* AVCaptureService.swift in Sources */,
+				D10000000000000000000002 /* AssetRecordingWriter.swift in Sources */,
+				D10000000000000000000003 /* DeviceCatalog.swift in Sources */,
+				D10000000000000000000004 /* Geometry.swift in Sources */,
+				D10000000000000000000005 /* InterruptedRecordingRecovery.swift in Sources */,
+				D10000000000000000000006 /* LiveRecordingPipeline.swift in Sources */,
+				D10000000000000000000007 /* LocalRecordingLibrary.swift in Sources */,
+				D10000000000000000000008 /* MetalVideoCompositor.swift in Sources */,
+				D10000000000000000000009 /* Models.swift in Sources */,
+				D1000000000000000000000A /* PCMAudioMixer.swift in Sources */,
+				D1000000000000000000000B /* Protocols.swift in Sources */,
+				D1000000000000000000000C /* RecordingEngine.swift in Sources */,
+				D1000000000000000000000D /* RecordingFolderStore.swift in Sources */,
+				D1000000000000000000000E /* ScreenCaptureService.swift in Sources */,
+				D1000000000000000000000F /* ScreenCaptureTarget.swift in Sources */,
+				D10000000000000000000010 /* ScreenContentPicker.swift in Sources */,
+				D10000000000000000000011 /* ScreenPreviewService.swift in Sources */,
+				D10000000000000000000012 /* Timeline.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D20000000000000000000001 /* AppModel.swift in Sources */,
+				D20000000000000000000002 /* CameraPreviewController.swift in Sources */,
+				D20000000000000000000003 /* GlobalHotKeyManager.swift in Sources */,
+				D20000000000000000000004 /* LibraryView.swift in Sources */,
+				D20000000000000000000005 /* LocalRecorderApp.swift in Sources */,
+				D20000000000000000000006 /* RecordView.swift in Sources */,
+				D20000000000000000000007 /* RecordingControllerWindow.swift in Sources */,
+				D20000000000000000000008 /* RegionSelectionController.swift in Sources */,
+				D20000000000000000000009 /* RootView.swift in Sources */,
+				D2000000000000000000000A /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D30000000000000000000001 /* AssetWriterIntegrationTests.swift in Sources */,
+				D30000000000000000000002 /* ModelsAndGeometryTests.swift in Sources */,
+				D30000000000000000000003 /* RecordingEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D40000000000000000000001 /* LocalRecorderUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		800000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 400000000000000000000001 /* RecorderCore */; targetProxy = 900000000000000000000001 /* PBXContainerItemProxy */; };
+		800000000000000000000002 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 400000000000000000000001 /* RecorderCore */; targetProxy = 900000000000000000000002 /* PBXContainerItemProxy */; };
+		800000000000000000000003 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 400000000000000000000002 /* LocalRecorder */; targetProxy = 900000000000000000000003 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		710000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		710000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		710000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundlePackageType = FMWK;
+				MACH_O_TYPE = staticlib;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.core;
+				PRODUCT_NAME = RecorderCore;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		710000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundlePackageType = FMWK;
+				MACH_O_TYPE = staticlib;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.core;
+				PRODUCT_NAME = RecorderCore;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Release;
+		};
+		710000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LocalRecorder/LocalRecorder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LocalRecorder/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder;
+				PRODUCT_NAME = "Local Recorder";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		710000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LocalRecorder/LocalRecorder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LocalRecorder/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder;
+				PRODUCT_NAME = "Local Recorder";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Release;
+		};
+		710000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.coretests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		710000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.coretests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Release;
+		};
+		710000000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = LocalRecorder;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		71000000000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = LocalRecorder;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		700000000000000000000001 /* Build configuration list for PBXProject "LocalRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				710000000000000000000001 /* Debug */,
+				710000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000002 /* Build configuration list for PBXNativeTarget "RecorderCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				710000000000000000000003 /* Debug */,
+				710000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000003 /* Build configuration list for PBXNativeTarget "LocalRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				710000000000000000000005 /* Debug */,
+				710000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000004 /* Build configuration list for PBXNativeTarget "RecorderCoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				710000000000000000000007 /* Debug */,
+				710000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000005 /* Build configuration list for PBXNativeTarget "LocalRecorderUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				710000000000000000000009 /* Debug */,
+				71000000000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}

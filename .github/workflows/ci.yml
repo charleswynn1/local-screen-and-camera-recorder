@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Validate Swift package
+        run: swift build
+
+      - name: Run core tests
+        run: swift test
+
+      - name: Run standalone media harness
+        run: swift run RecorderCoreHarness
+
+      - name: Build sandboxed app without signing
+        run: |
+          xcodebuild build \
+            -project LocalRecorder.xcodeproj \
+            -scheme LocalRecorder \
+            -configuration Debug \
+            -destination "platform=macOS,arch=arm64" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run deterministic macOS UI tests
+        run: |
+          xcodebuild test \
+            -project LocalRecorder.xcodeproj \
+            -scheme LocalRecorder \
+            -configuration Debug \
+            -destination "platform=macOS,arch=arm64" \
+            -only-testing:LocalRecorderUITests \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            DEVELOPMENT_TEAM=""

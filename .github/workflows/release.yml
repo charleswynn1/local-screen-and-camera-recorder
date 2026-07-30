@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  notarized-dmg:
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Import Developer ID certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.BUILD_KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="${RUNNER_TEMP}/developer-id.p12"
+          KEYCHAIN_PATH="${RUNNER_TEMP}/local-recorder-signing.keychain-db"
+          printf '%s' "${CERTIFICATE_BASE64}" | base64 --decode > "${CERTIFICATE_PATH}"
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security import "${CERTIFICATE_PATH}" \
+            -P "${CERTIFICATE_PASSWORD}" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "${KEYCHAIN_PATH}"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "${KEYCHAIN_PASSWORD}" \
+            "${KEYCHAIN_PATH}"
+          security list-keychain -d user -s "${KEYCHAIN_PATH}"
+
+      - name: Prepare notarization key
+        env:
+          NOTARY_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
+        run: |
+          printf '%s' "${NOTARY_KEY_BASE64}" | base64 --decode > "${RUNNER_TEMP}/AuthKey.p8"
+
+      - name: Run release verification
+        run: |
+          swift test
+          swift run RecorderCoreHarness
+
+      - name: Build, sign, notarize, and package
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}" ./scripts/build-release.sh
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            "build/release/LocalRecorder-${VERSION}-arm64.dmg" \
+            "build/release/LocalRecorder-${VERSION}-arm64.dmg.sha256" \
+            --verify-tag \
+            --generate-notes \
+            --title "Local Recorder ${VERSION}"

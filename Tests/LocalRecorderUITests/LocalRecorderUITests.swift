@@ -1,0 +1,87 @@
+import XCTest
+
+final class LocalRecorderUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testPrimaryNavigationAndModeChoicesAreDiscoverable() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-unready"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["New Recording"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Screen Only"].exists)
+        XCTAssertTrue(app.buttons["Camera Only"].exists)
+        XCTAssertTrue(app.buttons["Screen + Camera"].exists)
+        XCTAssertTrue(app.staticTexts["Local-only · No uploads"].exists)
+
+        app.staticTexts["Library"].click()
+        XCTAssertTrue(app.staticTexts["Recordings"].waitForExistence(timeout: 2))
+
+        app.staticTexts["Settings"].click()
+        XCTAssertTrue(app.staticTexts["Privacy"].waitForExistence(timeout: 2))
+    }
+
+    func testRecordingIsDisabledBeforeRequiredSetup() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-unready"
+        ]
+        app.launch()
+
+        let recordButton = app.buttons["Start Recording"]
+        XCTAssertTrue(recordButton.waitForExistence(timeout: 5))
+        XCTAssertFalse(recordButton.isEnabled)
+        XCTAssertTrue(app.staticTexts["Camera access"].exists)
+        XCTAssertTrue(app.buttons["Grant Access"].exists)
+    }
+
+    func testModeSwitchingAndReadyStateControls() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-ready"
+        ]
+        app.launch()
+
+        let recordButton = app.buttons["Start Recording"]
+        XCTAssertTrue(recordButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(recordButton.isEnabled)
+        XCTAssertTrue(app.switches["Microphone"].exists)
+        XCTAssertTrue(app.popUpButtons["quality-picker"].exists)
+
+        app.buttons["Screen Only"].click()
+        XCTAssertFalse(recordButton.isEnabled)
+        XCTAssertTrue(app.staticTexts["No screen source selected"].exists)
+
+        app.buttons["Camera Only"].click()
+        XCTAssertTrue(recordButton.isEnabled)
+
+        app.buttons["Screen + Camera"].click()
+        XCTAssertFalse(recordButton.isEnabled)
+    }
+
+    func testLibraryActionsAreDiscoverable() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-ready"
+        ]
+        app.launch()
+
+        app.staticTexts["Library"].click()
+        let fixture = app.staticTexts["UI Fixture"]
+        XCTAssertTrue(fixture.waitForExistence(timeout: 5))
+        fixture.click()
+
+        XCTAssertTrue(app.buttons["Rename"].exists)
+        XCTAssertTrue(app.buttons["Show in Finder"].exists)
+        XCTAssertTrue(app.buttons["Share"].exists)
+        XCTAssertTrue(app.buttons["Move to Trash"].exists)
+    }
+}
