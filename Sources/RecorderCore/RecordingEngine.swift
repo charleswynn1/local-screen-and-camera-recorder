@@ -2,12 +2,16 @@ import Foundation
 
 public actor RecordingEngine {
     public typealias UpdateHandler = @Sendable (RecordingSnapshot) -> Void
+    public typealias PreviewHandler =
+        @Sendable (RecordingPreviewFrame) async -> Void
 
     private let factory: any RecordingPipelineFactory
     private let updateHandler: UpdateHandler
+    private let previewHandler: PreviewHandler
     private var snapshot = RecordingSnapshot.idle
     private var pipeline: (any RecordingPipeline)?
     private var eventTask: Task<Void, Never>?
+    private var previewTask: Task<Void, Never>?
     private var countdownToken: UUID?
 
     public init(
@@ -15,6 +19,17 @@ public actor RecordingEngine {
         updateHandler: @escaping UpdateHandler = { _ in }
     ) {
         self.factory = factory
+        previewHandler = { _ in }
+        self.updateHandler = updateHandler
+    }
+
+    public init(
+        factory: any RecordingPipelineFactory,
+        updateHandler: @escaping UpdateHandler,
+        previewHandler: @escaping PreviewHandler
+    ) {
+        self.factory = factory
+        self.previewHandler = previewHandler
         self.updateHandler = updateHandler
     }
 
@@ -61,14 +76,19 @@ public actor RecordingEngine {
             countdownToken = nil
 
             try await pipeline.start()
-            transition(.recording)
             observeEvents(from: pipeline)
+            observePreviewFrames(from: pipeline)
+            transition(.recording)
         } catch is CancellationError {
+            previewTask?.cancel()
+            previewTask = nil
             await pipeline?.cancel()
             pipeline = nil
             transition(.idle)
             throw RecorderError.cancelled
         } catch {
+            previewTask?.cancel()
+            previewTask = nil
             await pipeline?.cancel()
             pipeline = nil
             transition(.failed, message: error.localizedDescription)
@@ -79,6 +99,8 @@ public actor RecordingEngine {
     public func cancelCountdown() async {
         guard snapshot.phase == .countingDown else { return }
         countdownToken = nil
+        previewTask?.cancel()
+        previewTask = nil
         await pipeline?.cancel()
         pipeline = nil
         transition(.idle)
@@ -104,6 +126,8 @@ public actor RecordingEngine {
         transition(.finalizing, message: message)
         eventTask?.cancel()
         eventTask = nil
+        previewTask?.cancel()
+        previewTask = nil
         do {
             let url = try await pipeline.stop()
             self.pipeline = nil
@@ -126,6 +150,8 @@ public actor RecordingEngine {
         countdownToken = nil
         eventTask?.cancel()
         eventTask = nil
+        previewTask?.cancel()
+        previewTask = nil
         await pipeline?.cancel()
         pipeline = nil
         transition(.idle)
@@ -141,6 +167,18 @@ public actor RecordingEngine {
         }
     }
 
+    private func observePreviewFrames(
+        from pipeline: any RecordingPipeline
+    ) {
+        previewTask?.cancel()
+        previewTask = Task { [weak self] in
+            for await frame in pipeline.previewFrames {
+                guard !Task.isCancelled, let self else { return }
+                await self.previewHandler(frame)
+            }
+        }
+    }
+
     private func handle(_ event: PipelineEvent) async {
         switch event {
         case let .warning(message):
@@ -148,6 +186,8 @@ public actor RecordingEngine {
         case let .stopRequested(message):
             _ = try? await stop(message: message)
         case let .fatal(message):
+            previewTask?.cancel()
+            previewTask = nil
             await pipeline?.cancel()
             pipeline = nil
             transition(.failed, message: message)

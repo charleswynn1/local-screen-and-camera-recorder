@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import AppKit
 import Combine
+import CoreImage
 import RecorderCore
 
 @MainActor
@@ -27,6 +28,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var highQualityIssue: String?
     @Published private(set) var microphoneLevel = 0.0
     @Published private(set) var systemAudioLevel = 0.0
+    @Published private(set) var recordingCameraPreview: NSImage?
+    @Published private(set) var isRecordingCameraPreviewVisible = true
 
     let cameraPreview = CameraPreviewController()
     private let microphoneMeter = MicrophoneMeterController()
@@ -44,6 +47,9 @@ final class AppModel: ObservableObject {
     private var deviceObservers = [NSObjectProtocol]()
     private var workspaceObservers = [NSObjectProtocol]()
     private let controllerWindow = RecordingControllerWindowManager()
+    private let recordingPreviewContext = CIContext(
+        options: [.cacheIntermediates: false]
+    )
     private var hasBootstrapped = false
 
     private var isUITesting: Bool {
@@ -51,18 +57,23 @@ final class AppModel: ObservableObject {
         let arguments = ProcessInfo.processInfo.arguments
         return arguments.contains("--ui-testing-ready")
             || arguments.contains("--ui-testing-unready")
+            || arguments.contains("--ui-testing-recording-controller")
 #else
         return false
 #endif
     }
 
     private lazy var engine = RecordingEngine(
-        factory: LiveRecordingPipelineFactory()
-    ) { [weak self] snapshot in
-        Task { @MainActor [weak self] in
-            self?.apply(snapshot)
+        factory: LiveRecordingPipelineFactory(),
+        updateHandler: { [weak self] snapshot in
+            Task { @MainActor [weak self] in
+                self?.apply(snapshot)
+            }
+        },
+        previewHandler: { [weak self] frame in
+            await self?.applyRecordingPreview(frame)
         }
-    }
+    )
 
     init() {
         configuration = Self.loadSettings()
@@ -280,6 +291,8 @@ final class AppModel: ObservableObject {
         errorMessage = nil
         noticeMessage = nil
         elapsedSeconds = 0
+        recordingCameraPreview = nil
+        isRecordingCameraPreviewVisible = true
         recordTask?.cancel()
         recordTask = Task { [weak self] in
             guard let self else { return }
@@ -339,6 +352,15 @@ final class AppModel: ObservableObject {
                 await engine.resume()
             }
         }
+    }
+
+    func toggleRecordingCameraPreview() {
+        guard configuration.mode == .camera,
+              [.recording, .paused].contains(snapshot.phase) else {
+            return
+        }
+        isRecordingCameraPreviewVisible.toggle()
+        controllerWindow.show(model: self)
     }
 
     func stopRecording() {
@@ -428,6 +450,8 @@ final class AppModel: ObservableObject {
             controllerWindow.show(model: self)
         case .completed:
             timerTask?.cancel()
+            recordingCameraPreview = nil
+            isRecordingCameraPreviewVisible = true
             controllerWindow.closeAndRestore()
             Task {
                 await refreshLibrary()
@@ -435,17 +459,54 @@ final class AppModel: ObservableObject {
             }
         case .failed:
             timerTask?.cancel()
+            recordingCameraPreview = nil
+            isRecordingCameraPreviewVisible = true
             controllerWindow.closeAndRestore()
             errorMessage = snapshot.message
             Task { await updateCameraPreview() }
         case .idle:
             timerTask?.cancel()
             elapsedSeconds = 0
+            recordingCameraPreview = nil
+            isRecordingCameraPreviewVisible = true
             controllerWindow.closeAndRestore()
             Task { await updateCameraPreview() }
         case .selecting, .countingDown:
             break
         }
+    }
+
+    private func applyRecordingPreview(
+        _ frame: RecordingPreviewFrame
+    ) {
+        guard configuration.mode == .camera,
+              isRecordingCameraPreviewVisible,
+              [.recording, .paused].contains(snapshot.phase) else {
+            return
+        }
+        let source = CIImage(cvPixelBuffer: frame.pixelBuffer)
+        guard !source.extent.isEmpty else { return }
+        let scale = min(
+            1,
+            640 / source.extent.width,
+            360 / source.extent.height
+        )
+        let image = source.transformed(
+            by: CGAffineTransform(scaleX: scale, y: scale)
+        )
+        guard let cgImage = recordingPreviewContext.createCGImage(
+            image,
+            from: image.extent.integral
+        ) else {
+            return
+        }
+        recordingCameraPreview = NSImage(
+            cgImage: cgImage,
+            size: NSSize(
+                width: cgImage.width,
+                height: cgImage.height
+            )
+        )
     }
 
     private func startElapsedTimerIfNeeded() {
@@ -763,7 +824,11 @@ final class AppModel: ObservableObject {
 #if DEBUG
     private func bootstrapForUITestingIfNeeded() -> Bool {
         let arguments = ProcessInfo.processInfo.arguments
+        let isControllerTest = arguments.contains(
+            "--ui-testing-recording-controller"
+        )
         let isReady = arguments.contains("--ui-testing-ready")
+            || isControllerTest
         let isUnready = arguments.contains("--ui-testing-unready")
         guard isReady || isUnready else { return false }
 
@@ -831,6 +896,31 @@ final class AppModel: ObservableObject {
                 fileSize: 1_024
             )
         ]
+        if isControllerTest {
+            let fixture = CIImage(
+                color: CIColor(
+                    red: 0.12,
+                    green: 0.32,
+                    blue: 0.58
+                )
+            )
+            .cropped(
+                to: CGRect(x: 0, y: 0, width: 640, height: 360)
+            )
+            if let cgImage = recordingPreviewContext.createCGImage(
+                fixture,
+                from: fixture.extent
+            ) {
+                recordingCameraPreview = NSImage(
+                    cgImage: cgImage,
+                    size: NSSize(width: 640, height: 360)
+                )
+            }
+            snapshot = RecordingSnapshot(phase: .recording)
+            elapsedSeconds = 7
+            isRecordingCameraPreviewVisible = true
+            controllerWindow.show(model: self)
+        }
         return true
     }
 #endif

@@ -26,6 +26,7 @@ Run this matrix on a release-signed Apple Silicon MacBook with macOS 15 before p
 - Test the built-in camera, a USB/UVC camera, and Continuity Camera.
 - Test built-in and external microphones.
 - Verify the preview is mirrored and the encoded camera is naturally oriented.
+- During camera-only recording, verify the floating controller shows the live camera, can collapse without interrupting capture, and can restore the live preview.
 - Verify small, medium, and large overlays in every corner.
 - Disconnect the camera during combined capture; screen capture must continue without the overlay.
 - Disconnect the camera during camera-only capture; the file must finalize.

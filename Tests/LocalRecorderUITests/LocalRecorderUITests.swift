@@ -92,4 +92,32 @@ final class LocalRecorderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Share"].exists)
         XCTAssertTrue(app.buttons["Move to Trash"].exists)
     }
+
+    @MainActor
+    func testCameraOnlyRecordingPreviewCanBeHiddenAndRestored() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-recording-controller"
+        ]
+        app.launch()
+
+        let preview = app.descendants(matching: .any)[
+            "recording-camera-preview"
+        ]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+
+        let hideButton = app.buttons["Hide Camera Preview"]
+        XCTAssertTrue(hideButton.waitForExistence(timeout: 2))
+        hideButton.click()
+        XCTAssertTrue(preview.waitForNonExistence(timeout: 2))
+
+        let showButton = app.buttons["Show Camera Preview"]
+        XCTAssertTrue(showButton.waitForExistence(timeout: 2))
+        showButton.click()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["recording-camera-preview"]
+                .waitForExistence(timeout: 2)
+        )
+    }
 }

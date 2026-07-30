@@ -81,8 +81,11 @@ public struct LiveRecordingPipelineFactory: RecordingPipelineFactory {
 
 public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable {
     public let events: AsyncStream<PipelineEvent>
+    public let previewFrames: AsyncStream<RecordingPreviewFrame>
 
     private let eventContinuation: AsyncStream<PipelineEvent>.Continuation
+    private let previewContinuation:
+        AsyncStream<RecordingPreviewFrame>.Continuation
     private let request: RecordingRequest
     private let outputSize: CGSize
     private let screenSource: any ScreenSource
@@ -109,6 +112,8 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
     private var pendingAudioSamples = 0
     private var audioBackpressureReported = false
     private let maximumPendingAudioSamples = 32
+    private var lastPreviewPresentationTime: CMTime?
+    private let previewInterval = CMTime(value: 1, timescale: 10)
     private var diskMonitor: Task<Void, Never>?
 
     public init(
@@ -135,6 +140,9 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         self.diskMonitorInterval = diskMonitorInterval
         timeline = TimelineNormalizer(epoch: .zero)
         (events, eventContinuation) = AsyncStream.makeStream()
+        (previewFrames, previewContinuation) = AsyncStream.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
     }
 
     public func prepare() async throws {
@@ -239,6 +247,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         }
         let url = try await writer.finish()
         eventContinuation.finish()
+        previewContinuation.finish()
         return url
     }
 
@@ -253,6 +262,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         await microphoneSource.stop()
         writer.cancel()
         eventContinuation.finish()
+        previewContinuation.finish()
     }
 
     private func enqueueScreen(_ sample: VideoSample) {
@@ -377,12 +387,43 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
                 frame,
                 at: timeline.normalized(presentationTime)
             )
+            publishCameraPreview(
+                frame,
+                sourcePresentationTime: presentationTime
+            )
             if !appended {
                 reportWriterFailureIfNeeded()
             }
         } catch {
             eventContinuation.yield(.fatal(error.localizedDescription))
         }
+    }
+
+    private func publishCameraPreview(
+        _ frame: CVPixelBuffer,
+        sourcePresentationTime: CMTime
+    ) {
+        guard request.configuration.mode == .camera else { return }
+        if let lastPreviewPresentationTime {
+            let interval = CMTimeSubtract(
+                sourcePresentationTime,
+                lastPreviewPresentationTime
+            )
+            if interval.isNumeric,
+               interval >= .zero,
+               interval < previewInterval {
+                return
+            }
+        }
+        lastPreviewPresentationTime = sourcePresentationTime
+        previewContinuation.yield(
+            RecordingPreviewFrame(
+                pixelBuffer: frame,
+                presentationTime: timeline.normalized(
+                    sourcePresentationTime
+                )
+            )
+        )
     }
 
     private func reportWriterFailureIfNeeded() {

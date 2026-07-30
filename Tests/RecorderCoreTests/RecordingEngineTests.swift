@@ -65,6 +65,57 @@ struct RecordingEngineTests {
     }
 
     @Test
+    func recordingPreviewFramesAreForwardedWhileRecording() async throws {
+        let output = URL(fileURLWithPath: "/tmp/preview.mp4")
+        let pipeline = FakePipeline(outputURL: output)
+        let previews = PreviewFrameCollector()
+        let engine = RecordingEngine(
+            factory: FakePipelineFactory(pipeline: pipeline),
+            updateHandler: { _ in },
+            previewHandler: { frame in
+                previews.append(frame)
+            }
+        )
+        let configuration = RecordingConfiguration(
+            mode: .camera,
+            cameraDeviceID: "camera",
+            capturesSystemAudio: false,
+            capturesMicrophone: false
+        )
+
+        try await engine.start(
+            RecordingRequest(
+                configuration: configuration,
+                screenTarget: nil,
+                destinationFolder: URL(fileURLWithPath: "/tmp")
+            ),
+            countdown: 0
+        )
+        let pixelBuffer = try makeTestPixelBuffer(
+            width: 640,
+            height: 360
+        )
+        pipeline.sendPreview(
+            RecordingPreviewFrame(
+                pixelBuffer: pixelBuffer,
+                presentationTime: CMTime(value: 1, timescale: 10)
+            )
+        )
+
+        let frameArrived = await waitUntil {
+            previews.values == [
+                PreviewFrameCollector.Value(
+                    width: 640,
+                    height: 360,
+                    presentationTime: CMTime(value: 1, timescale: 10)
+                )
+            ]
+        }
+        #expect(frameArrived)
+        #expect(try await engine.stop() == output)
+    }
+
+    @Test
     func prepareFailureTransitionsToFailedAndCancels() async {
         let pipeline = FakePipeline(
             outputURL: URL(fileURLWithPath: "/tmp/unused.mp4"),
@@ -535,6 +586,64 @@ struct LivePipelineFailurePolicyTests {
     }
 
     @Test
+    func cameraOnlyPublishesTheCompositedRecordingFrameForPreview() async throws {
+        let camera = EventCameraSource()
+        let outputURL = URL(
+            fileURLWithPath: "/tmp/\(UUID().uuidString).mp4"
+        )
+        let pipeline = try LiveRecordingPipeline(
+            request: RecordingRequest(
+                configuration: RecordingConfiguration(
+                    mode: .camera,
+                    cameraDeviceID: "camera",
+                    capturesSystemAudio: false,
+                    capturesMicrophone: false
+                ),
+                screenTarget: nil,
+                destinationFolder: FileManager.default.temporaryDirectory
+            ),
+            outputSize: CGSize(width: 640, height: 360),
+            screenSource: EventScreenSource(),
+            cameraSource: camera,
+            microphoneSource: EventMicrophoneSource(),
+            compositor: SolidVideoCompositor(),
+            audioMixer: NoopAudioMixer(),
+            writer: EventRecordingWriter(outputURL: outputURL),
+            diskSpaceChecker: MutableDiskSpaceChecker(
+                capacity: 2_000_000_000
+            )
+        )
+        let previews = PreviewFrameCollector()
+        let observer = Task {
+            for await frame in pipeline.previewFrames {
+                previews.append(frame)
+                return
+            }
+        }
+
+        try await pipeline.prepare()
+        try await pipeline.start()
+        camera.send(
+            try makeTestVideoSample(
+                width: 320,
+                height: 180,
+                presentationTime: CMClockGetTime(
+                    CMClockGetHostTimeClock()
+                )
+            )
+        )
+
+        let previewArrived = await waitForPreview {
+            previews.values.first.map {
+                $0.width == 640 && $0.height == 360
+            } == true
+        }
+        #expect(previewArrived)
+        observer.cancel()
+        #expect(try await pipeline.stop() == outputURL)
+    }
+
+    @Test
     func audioWarningsContinueButScreenLossRequestsStop() async throws {
         let setup = try makePipeline(mode: .combined)
         try await setup.pipeline.prepare()
@@ -665,6 +774,19 @@ struct LivePipelineFailurePolicyTests {
             outputURL
         )
     }
+
+    private func waitForPreview(
+        timeout: Duration = .seconds(2),
+        condition: @escaping @Sendable () -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        return false
+    }
 }
 }
 
@@ -678,6 +800,33 @@ private final class SnapshotCollector: @unchecked Sendable {
 
     func append(_ snapshot: RecordingSnapshot) {
         lock.withLock { storage.append(snapshot) }
+    }
+}
+
+private final class PreviewFrameCollector: @unchecked Sendable {
+    struct Value: Equatable {
+        let width: Int
+        let height: Int
+        let presentationTime: CMTime
+    }
+
+    private let lock = NSLock()
+    private var storage = [Value]()
+
+    var values: [Value] {
+        lock.withLock { storage }
+    }
+
+    func append(_ frame: RecordingPreviewFrame) {
+        lock.withLock {
+            storage.append(
+                Value(
+                    width: CVPixelBufferGetWidth(frame.pixelBuffer),
+                    height: CVPixelBufferGetHeight(frame.pixelBuffer),
+                    presentationTime: frame.presentationTime
+                )
+            )
+        }
     }
 }
 
@@ -730,6 +879,7 @@ private final class EventScreenSource: ScreenSource, @unchecked Sendable {
 
 private final class EventCameraSource: CameraSource, @unchecked Sendable {
     private let lock = NSLock()
+    private var videoHandler: (@Sendable (VideoSample) -> Void)?
     private var eventHandler: (@Sendable (PipelineEvent) -> Void)?
     private var startCountStorage = 0
 
@@ -745,6 +895,7 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
         eventHandler: @escaping @Sendable (PipelineEvent) -> Void
     ) async throws {
         lock.withLock {
+            self.videoHandler = videoHandler
             self.eventHandler = eventHandler
             startCountStorage += 1
         }
@@ -752,6 +903,7 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
 
     func stop() async {
         lock.withLock {
+            videoHandler = nil
             eventHandler = nil
         }
     }
@@ -759,6 +911,11 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
     func send(_ event: PipelineEvent) {
         let handler = lock.withLock { eventHandler }
         handler?(event)
+    }
+
+    func send(_ sample: VideoSample) {
+        let handler = lock.withLock { videoHandler }
+        handler?(sample)
     }
 }
 
@@ -823,12 +980,51 @@ private final class NoopVideoCompositor: VideoCompositor, @unchecked Sendable {
     }
 }
 
+private final class SolidVideoCompositor:
+    VideoCompositor,
+    @unchecked Sendable
+{
+    func render(
+        screen: CVPixelBuffer?,
+        camera: CVPixelBuffer?,
+        mode: CaptureMode,
+        overlay: OverlayLayout,
+        outputSize: CGSize,
+        pool: CVPixelBufferPool
+    ) throws -> CVPixelBuffer {
+        var output: CVPixelBuffer?
+        let status = CVPixelBufferPoolCreatePixelBuffer(
+            kCFAllocatorDefault,
+            pool,
+            &output
+        )
+        guard status == kCVReturnSuccess, let output else {
+            throw RecorderError.noVideoFrames
+        }
+        return output
+    }
+}
+
 private final class EventRecordingWriter: RecordingWriter, @unchecked Sendable {
     let outputURL: URL
-    var pixelBufferPool: CVPixelBufferPool? { nil }
+    let pixelBufferPool: CVPixelBufferPool?
 
     init(outputURL: URL) {
         self.outputURL = outputURL
+        var pool: CVPixelBufferPool?
+        CVPixelBufferPoolCreate(
+            kCFAllocatorDefault,
+            nil,
+            [
+                kCVPixelBufferPixelFormatTypeKey:
+                    kCVPixelFormatType_32BGRA,
+                kCVPixelBufferWidthKey: 640,
+                kCVPixelBufferHeightKey: 360,
+                kCVPixelBufferMetalCompatibilityKey: true
+            ] as CFDictionary,
+            &pool
+        )
+        pixelBufferPool = pool
     }
 
     func start() throws {}
@@ -891,7 +1087,10 @@ private final class FakePipeline: RecordingPipeline, @unchecked Sendable {
     }
 
     let events: AsyncStream<PipelineEvent>
+    let previewFrames: AsyncStream<RecordingPreviewFrame>
     private let continuation: AsyncStream<PipelineEvent>.Continuation
+    private let previewContinuation:
+        AsyncStream<RecordingPreviewFrame>.Continuation
     private let outputURL: URL
     private let prepareError: Error?
     private let stopError: Error?
@@ -911,6 +1110,9 @@ private final class FakePipeline: RecordingPipeline, @unchecked Sendable {
         self.prepareError = prepareError
         self.stopError = stopError
         (events, continuation) = AsyncStream.makeStream()
+        (previewFrames, previewContinuation) = AsyncStream.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
     }
 
     func prepare() async throws {
@@ -936,19 +1138,81 @@ private final class FakePipeline: RecordingPipeline, @unchecked Sendable {
             throw stopError
         }
         continuation.finish()
+        previewContinuation.finish()
         return outputURL
     }
 
     func cancel() async {
         append(.cancel)
         continuation.finish()
+        previewContinuation.finish()
     }
 
     func send(_ event: PipelineEvent) {
         continuation.yield(event)
     }
 
+    func sendPreview(_ frame: RecordingPreviewFrame) {
+        previewContinuation.yield(frame)
+    }
+
     private func append(_ call: Call) {
         lock.withLock { callStorage.append(call) }
     }
+}
+
+private func makeTestPixelBuffer(
+    width: Int,
+    height: Int
+) throws -> CVPixelBuffer {
+    var pixelBuffer: CVPixelBuffer?
+    let status = CVPixelBufferCreate(
+        kCFAllocatorDefault,
+        width,
+        height,
+        kCVPixelFormatType_32BGRA,
+        nil,
+        &pixelBuffer
+    )
+    guard status == kCVReturnSuccess, let pixelBuffer else {
+        throw RecorderError.noVideoFrames
+    }
+    return pixelBuffer
+}
+
+private func makeTestVideoSample(
+    width: Int,
+    height: Int,
+    presentationTime: CMTime
+) throws -> VideoSample {
+    let pixelBuffer = try makeTestPixelBuffer(
+        width: width,
+        height: height
+    )
+    var formatDescription: CMVideoFormatDescription?
+    let formatStatus = CMVideoFormatDescriptionCreateForImageBuffer(
+        allocator: kCFAllocatorDefault,
+        imageBuffer: pixelBuffer,
+        formatDescriptionOut: &formatDescription
+    )
+    guard formatStatus == noErr, let formatDescription else {
+        throw RecorderError.noVideoFrames
+    }
+    var timing = CMSampleTimingInfo(
+        duration: CMTime(value: 1, timescale: 30),
+        presentationTimeStamp: presentationTime,
+        decodeTimeStamp: .invalid
+    )
+    var sampleBuffer: CMSampleBuffer?
+    let sampleStatus = CMSampleBufferCreateReadyWithImageBuffer(
+        allocator: kCFAllocatorDefault,
+        imageBuffer: pixelBuffer,
+        formatDescription: formatDescription,
+        sampleTiming: &timing,
+        sampleBufferOut: &sampleBuffer
+    )
+    guard sampleStatus == noErr, let sampleBuffer else {
+        throw RecorderError.noVideoFrames
+    }
+    return VideoSample(sampleBuffer)
 }

@@ -11,6 +11,7 @@ Local Recorder is a private, offline macOS screen-and-camera recorder. It record
 - Independent system-audio and microphone controls with live level meters
 - 720p/30, 1080p/30, and up-to-4K/60 presets with hardware preflight
 - Three-second countdown, pause/resume, timer, and global hot keys
+- Live mirrored camera-only recording preview that can collapse to a compact controller without stopping capture
 - Cursor and mouse-click capture controls
 - Folder-backed recording library with preview, rename, share, Finder reveal, and Move to Trash
 - Sandboxed, local-only operation with no account, analytics, uploads, or network entitlement

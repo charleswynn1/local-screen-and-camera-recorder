@@ -77,12 +77,21 @@ public protocol DiskSpaceChecking: Sendable {
 
 public protocol RecordingPipeline: AnyObject, Sendable {
     var events: AsyncStream<PipelineEvent> { get }
+    var previewFrames: AsyncStream<RecordingPreviewFrame> { get }
     func prepare() async throws
     func start() async throws
     func pause() async
     func resume() async
     func stop() async throws -> URL
     func cancel() async
+}
+
+public extension RecordingPipeline {
+    var previewFrames: AsyncStream<RecordingPreviewFrame> {
+        AsyncStream { continuation in
+            continuation.finish()
+        }
+    }
 }
 
 public protocol RecordingPipelineFactory: Sendable {

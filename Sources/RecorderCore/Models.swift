@@ -504,6 +504,19 @@ public struct VideoSample: @unchecked Sendable {
     }
 }
 
+public struct RecordingPreviewFrame: @unchecked Sendable {
+    public let pixelBuffer: CVPixelBuffer
+    public let presentationTime: CMTime
+
+    public init(
+        pixelBuffer: CVPixelBuffer,
+        presentationTime: CMTime
+    ) {
+        self.pixelBuffer = pixelBuffer
+        self.presentationTime = presentationTime
+    }
+}
+
 public struct AudioSample: @unchecked Sendable {
     public let source: AudioSourceKind
     public let sampleBuffer: CMSampleBuffer
