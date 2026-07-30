@@ -4,6 +4,11 @@ import Combine
 import CoreImage
 import RecorderCore
 
+private typealias ScreenPreviewProvider = (
+    ScreenCaptureTarget,
+    Bool
+) async throws -> CGImage
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var selectedSection: AppSection = .record
@@ -20,6 +25,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var recordings = [RecordingArtifact]()
     @Published var selectedRecording: RecordingArtifact?
     @Published private(set) var screenPreview: NSImage?
+    @Published private(set) var screenPreviewMessage: String?
     @Published private(set) var permissions = [PermissionKind: PermissionStatus]()
     @Published var errorMessage: String?
     @Published var noticeMessage: String?
@@ -40,9 +46,11 @@ final class AppModel: ObservableObject {
     private let folderStore = RecordingFolderStore()
     private let library: any RecordingLibrary = LocalRecordingLibrary()
     private let recovery = InterruptedRecordingRecovery()
+    private let screenPreviewProvider: ScreenPreviewProvider
     private var folderAccess: ScopedFolderAccess?
     private(set) var screenTarget: ScreenCaptureTarget?
     private var previewTask: Task<Void, Never>?
+    private var screenPreviewGeneration = UUID()
     private var timerTask: Task<Void, Never>?
     private var recordTask: Task<Void, Never>?
     private var deviceObservers = [NSObjectProtocol]()
@@ -79,6 +87,7 @@ final class AppModel: ObservableObject {
     )
 
     init() {
+        screenPreviewProvider = Self.makeScreenPreviewProvider()
         configuration = Self.loadSettings()
         for kind in PermissionKind.allCases {
             permissions[kind] = PermissionService.status(for: kind)
@@ -200,6 +209,7 @@ final class AppModel: ObservableObject {
         if !mode.needsScreen {
             screenTarget = nil
             screenPreview = nil
+            screenPreviewMessage = nil
             previewTask?.cancel()
         }
         Task { await updateCameraPreview() }
@@ -743,22 +753,43 @@ final class AppModel: ObservableObject {
 
     private func startScreenPreview() {
         previewTask?.cancel()
+        screenPreviewGeneration = UUID()
+        let generation = screenPreviewGeneration
         guard let target = resolvedScreenTarget else {
             screenPreview = nil
+            screenPreviewMessage = nil
             return
         }
-        previewTask = Task { [weak self, weak target] in
+        screenPreview = nil
+        screenPreviewMessage = "Loading preview…"
+        let provider = screenPreviewProvider
+        previewTask = Task { [weak self, target] in
             while !Task.isCancelled {
-                guard let self, let target else { return }
+                guard let self else { return }
                 if [.idle, .completed, .failed, .countingDown].contains(snapshot.phase) {
-                    if let image = try? await ScreenPreviewService.image(
-                        for: target,
-                        showsCursor: configuration.showsCursor
-                    ) {
+                    do {
+                        let image = try await provider(
+                            target,
+                            configuration.showsCursor
+                        )
+                        try Task.checkCancellation()
+                        guard screenPreviewGeneration == generation else {
+                            return
+                        }
                         screenPreview = NSImage(
                             cgImage: image,
                             size: target.pointSize
                         )
+                        screenPreviewMessage = nil
+                    } catch is CancellationError {
+                        return
+                    } catch {
+                        guard screenPreviewGeneration == generation else {
+                            return
+                        }
+                        screenPreview = nil
+                        screenPreviewMessage =
+                            "Preview unavailable. Retrying…"
                     }
                 }
                 try? await Task.sleep(for: .seconds(2))
@@ -899,6 +930,55 @@ final class AppModel: ObservableObject {
         return settings
     }
 
+    private static func makeScreenPreviewProvider() -> ScreenPreviewProvider {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains(
+            "--ui-testing-window-content"
+        ) {
+            return { _, _ in
+                await Task.yield()
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                guard let context = CGContext(
+                    data: nil,
+                    width: 16,
+                    height: 9,
+                    bitsPerComponent: 8,
+                    bytesPerRow: 0,
+                    space: colorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                ) else {
+                    throw RecorderError.captureFailed(
+                        "Could not create the UI test preview."
+                    )
+                }
+                context.setFillColor(
+                    CGColor(
+                        red: 0.12,
+                        green: 0.32,
+                        blue: 0.58,
+                        alpha: 1
+                    )
+                )
+                context.fill(
+                    CGRect(x: 0, y: 0, width: 16, height: 9)
+                )
+                guard let image = context.makeImage() else {
+                    throw RecorderError.captureFailed(
+                        "Could not render the UI test preview."
+                    )
+                }
+                return image
+            }
+        }
+#endif
+        return { target, showsCursor in
+            try await ScreenPreviewService.image(
+                for: target,
+                showsCursor: showsCursor
+            )
+        }
+    }
+
     private var resolvedScreenTarget: ScreenCaptureTarget? {
         screenTarget?.applying(
             windowContentCrop: configuration.windowContentCrop
@@ -965,6 +1045,7 @@ final class AppModel: ObservableObject {
             )
             screenTarget = target
             configuration.screenSelection = target.selection
+            startScreenPreview()
         }
 
         guard isReady else {

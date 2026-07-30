@@ -134,6 +134,11 @@ final class LocalRecorderUITests: XCTestCase {
             app.staticTexts["New Tab — Google Chrome"]
                 .waitForExistence(timeout: 5)
         )
+        XCTAssertTrue(
+            app.descendants(matching: .any)[
+                "screen-preview-image"
+            ].waitForExistence(timeout: 5)
+        )
         let toggle = app.descendants(matching: .any)[
             "web-content-only-toggle"
         ]

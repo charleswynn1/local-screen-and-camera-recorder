@@ -436,10 +436,18 @@ private struct PreviewCanvas: View {
                         Image(nsImage: preview)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .accessibilityIdentifier(
+                                "screen-preview-image"
+                            )
                     } else {
                         PreviewPlaceholder(
                             icon: "rectangle.dashed",
-                            text: "Choose a screen source"
+                            text: model.screenPreviewMessage
+                                ?? (
+                                    model.screenTarget == nil
+                                        ? "Choose a screen source"
+                                        : "Loading preview…"
+                                )
                         )
                     }
                 }
