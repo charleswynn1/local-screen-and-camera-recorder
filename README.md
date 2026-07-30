@@ -28,9 +28,17 @@ The command-line tools currently selected on the development Mac can compile and
 
 ## Development
 
-Open `LocalRecorder.xcodeproj`, select the **LocalRecorder** scheme, and run the app. Xcode will apply the sandbox, camera, microphone, user-selected-file, and hardened-runtime settings.
+Install the machine-local development signing identity once, then open `LocalRecorder.xcodeproj`, select the **LocalRecorder** scheme, and run the app:
 
-Debug app builds use a stable ad-hoc designated requirement so macOS privacy grants survive recompilation. This setting is Debug-only; Developer ID Release signing remains unchanged.
+```sh
+scripts/setup-development-signing.sh
+```
+
+The setup script creates a self-signed identity in a dedicated local keychain and asks macOS to trust it for code signing. This gives every Debug rebuild the same certificate-backed identity so Screen Recording permission remains valid after recompilation. The identity is local to the development Mac and cannot be used to distribute the app.
+
+After the first signed build, click **Grant Access**, enable **Local Recorder** in **System Settings → Privacy & Security → Screen & System Audio Recording**, and use macOS's **Quit & Reopen** action. If Xcode reports that the development keychain is locked after a Mac restart, rerun the setup script before building.
+
+Release signing is unchanged: public DMGs must still use the Developer ID and notarization workflow.
 
 Command-line validation:
 

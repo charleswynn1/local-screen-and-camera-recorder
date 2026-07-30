@@ -39,7 +39,7 @@ jobs:
             -destination "platform=macOS,arch=arm64" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Verify stable Debug signing identity
+      - name: Verify certificate-backed Debug signing contract
         run: scripts/verify-debug-signing.sh "$RUNNER_TEMP/local-recorder-signing"
 
       - name: Run deterministic macOS UI tests

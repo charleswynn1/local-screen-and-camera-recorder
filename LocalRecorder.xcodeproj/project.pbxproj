@@ -603,8 +603,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LocalRecorder/LocalRecorder.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Local Recorder Development";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -615,7 +617,6 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"$(PRODUCT_BUNDLE_IDENTIFIER)\"'";
 				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder;
 				PRODUCT_NAME = "Local Recorder";
 				SWIFT_EMIT_LOC_STRINGS = YES;

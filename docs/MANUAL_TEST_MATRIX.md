@@ -4,6 +4,7 @@ Run this matrix on a release-signed Apple Silicon MacBook with macOS 15 before p
 
 ## Permissions and onboarding
 
+- For a Debug build, run `scripts/setup-development-signing.sh`, grant Screen Recording, rebuild with a different `CURRENT_PROJECT_VERSION`, relaunch, and confirm the grant remains active.
 - Launch without Screen Recording, Camera, or Microphone permission.
 - Confirm each prompt appears only when the selected mode needs it.
 - Deny each permission and confirm recording remains disabled with recovery guidance.
