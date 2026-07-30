@@ -17,25 +17,39 @@ final class CameraPreviewController: @unchecked Sendable {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [self] in
                 do {
-                    session.beginConfiguration()
-                    defer { session.commitConfiguration() }
-                    session.sessionPreset = .high
-                    for input in session.inputs {
-                        session.removeInput(input)
+                    let activeDeviceID = try CaptureSessionTransaction
+                        .configureAndStart(session) {
+                            session.sessionPreset = .high
+                            for input in session.inputs {
+                                session.removeInput(input)
+                            }
+                            let camera = deviceID.flatMap(
+                                AVCaptureDevice.init(uniqueID:)
+                            )
+                                ?? AVCaptureDevice.systemPreferredCamera
+                                ?? AVCaptureDevice.default(for: .video)
+                            guard let camera else {
+                                throw RecorderError.invalidConfiguration(
+                                    ConfigurationIssue.missingCamera.message
+                                )
+                            }
+                            let input = try AVCaptureDeviceInput(
+                                device: camera
+                            )
+                            guard session.canAddInput(input) else {
+                                throw RecorderError.captureFailed(
+                                    "The selected camera cannot be previewed."
+                                )
+                            }
+                            session.addInput(input)
+                            return camera.uniqueID
+                        }
+                    self.activeDeviceID = activeDeviceID
+                    guard session.isRunning else {
+                        throw RecorderError.captureFailed(
+                            "The selected camera preview did not start."
+                        )
                     }
-                    let camera = deviceID.flatMap(AVCaptureDevice.init(uniqueID:))
-                        ?? AVCaptureDevice.systemPreferredCamera
-                        ?? AVCaptureDevice.default(for: .video)
-                    guard let camera else {
-                        throw RecorderError.invalidConfiguration(ConfigurationIssue.missingCamera.message)
-                    }
-                    let input = try AVCaptureDeviceInput(device: camera)
-                    guard session.canAddInput(input) else {
-                        throw RecorderError.captureFailed("The selected camera cannot be previewed.")
-                    }
-                    session.addInput(input)
-                    activeDeviceID = camera.uniqueID
-                    session.startRunning()
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: error)
@@ -129,46 +143,61 @@ final class MicrophoneMeterController: NSObject, AVCaptureAudioDataOutputSampleB
         try await withCheckedThrowingContinuation { continuation in
             sessionQueue.async { [self] in
                 do {
-                    session.beginConfiguration()
-                    defer { session.commitConfiguration() }
-                    session.sessionPreset = .high
-                    for input in session.inputs {
-                        session.removeInput(input)
-                    }
-                    for existingOutput in session.outputs {
-                        session.removeOutput(existingOutput)
-                    }
-                    let device = deviceID.flatMap(AVCaptureDevice.init(uniqueID:))
-                        ?? AVCaptureDevice.default(for: .audio)
-                    guard let device else {
-                        throw RecorderError.invalidConfiguration(
-                            ConfigurationIssue.missingMicrophone.message
-                        )
-                    }
-                    let input = try AVCaptureDeviceInput(device: device)
-                    guard session.canAddInput(input) else {
+                    let activeDeviceID = try CaptureSessionTransaction
+                        .configureAndStart(session) {
+                            session.sessionPreset = .high
+                            for input in session.inputs {
+                                session.removeInput(input)
+                            }
+                            for existingOutput in session.outputs {
+                                session.removeOutput(existingOutput)
+                            }
+                            let device = deviceID.flatMap(
+                                AVCaptureDevice.init(uniqueID:)
+                            )
+                                ?? AVCaptureDevice.default(for: .audio)
+                            guard let device else {
+                                throw RecorderError.invalidConfiguration(
+                                    ConfigurationIssue
+                                        .missingMicrophone
+                                        .message
+                                )
+                            }
+                            let input = try AVCaptureDeviceInput(
+                                device: device
+                            )
+                            guard session.canAddInput(input) else {
+                                throw RecorderError.captureFailed(
+                                    "The selected microphone cannot be monitored."
+                                )
+                            }
+                            session.addInput(input)
+                            output.audioSettings = [
+                                AVFormatIDKey: kAudioFormatLinearPCM,
+                                AVSampleRateKey: 48_000,
+                                AVNumberOfChannelsKey: 2,
+                                AVLinearPCMBitDepthKey: 32,
+                                AVLinearPCMIsFloatKey: true,
+                                AVLinearPCMIsNonInterleaved: false
+                            ]
+                            output.setSampleBufferDelegate(
+                                self,
+                                queue: sampleQueue
+                            )
+                            guard session.canAddOutput(output) else {
+                                throw RecorderError.captureFailed(
+                                    "The microphone level output is unavailable."
+                                )
+                            }
+                            session.addOutput(output)
+                            return device.uniqueID
+                        }
+                    self.activeDeviceID = activeDeviceID
+                    guard session.isRunning else {
                         throw RecorderError.captureFailed(
-                            "The selected microphone cannot be monitored."
+                            "The microphone level monitor did not start."
                         )
                     }
-                    session.addInput(input)
-                    output.audioSettings = [
-                        AVFormatIDKey: kAudioFormatLinearPCM,
-                        AVSampleRateKey: 48_000,
-                        AVNumberOfChannelsKey: 2,
-                        AVLinearPCMBitDepthKey: 32,
-                        AVLinearPCMIsFloatKey: true,
-                        AVLinearPCMIsNonInterleaved: false
-                    ]
-                    output.setSampleBufferDelegate(self, queue: sampleQueue)
-                    guard session.canAddOutput(output) else {
-                        throw RecorderError.captureFailed(
-                            "The microphone level output is unavailable."
-                        )
-                    }
-                    session.addOutput(output)
-                    activeDeviceID = device.uniqueID
-                    session.startRunning()
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: error)

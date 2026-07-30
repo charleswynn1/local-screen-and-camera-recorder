@@ -2,6 +2,34 @@
 import CoreMedia
 import Foundation
 
+public protocol CaptureSessionLifecycle: AnyObject {
+    func beginConfiguration()
+    func commitConfiguration()
+    func startRunning()
+}
+
+extension AVCaptureSession: CaptureSessionLifecycle {}
+
+public enum CaptureSessionTransaction {
+    @discardableResult
+    public static func configureAndStart<Output>(
+        _ session: any CaptureSessionLifecycle,
+        configuration: () throws -> Output
+    ) rethrows -> Output {
+        session.beginConfiguration()
+        let output: Output
+        do {
+            output = try configuration()
+        } catch {
+            session.commitConfiguration()
+            throw error
+        }
+        session.commitConfiguration()
+        session.startRunning()
+        return output
+    }
+}
+
 public final class AVCameraCaptureService:
     NSObject,
     CameraSource,
@@ -39,15 +67,17 @@ public final class AVCameraCaptureService:
                 (continuation: CheckedContinuation<Void, Error>) in
                 sessionQueue.async { [self] in
                     do {
-                        let deviceID = try configure(
-                            cameraDeviceID: cameraDeviceID,
-                            maximumVideoSize: maximumVideoSize,
-                            framesPerSecond: framesPerSecond
-                        )
+                        let deviceID = try CaptureSessionTransaction
+                            .configureAndStart(session) {
+                                try configure(
+                                    cameraDeviceID: cameraDeviceID,
+                                    maximumVideoSize: maximumVideoSize,
+                                    framesPerSecond: framesPerSecond
+                                )
+                            }
                         lock.withLock {
                             activeDeviceID = deviceID
                         }
-                        session.startRunning()
                         guard session.isRunning else {
                             throw RecorderError.captureFailed(
                                 "The selected camera did not start."
@@ -109,9 +139,6 @@ public final class AVCameraCaptureService:
         maximumVideoSize: CGSize,
         framesPerSecond: Int32
     ) throws -> String {
-        session.beginConfiguration()
-        defer { session.commitConfiguration() }
-
         for input in session.inputs {
             session.removeInput(input)
         }
@@ -325,13 +352,15 @@ public final class AVMicrophoneCaptureService:
                 (continuation: CheckedContinuation<Void, Error>) in
                 sessionQueue.async { [self] in
                     do {
-                        let deviceID = try configure(
-                            microphoneDeviceID: microphoneDeviceID
-                        )
+                        let deviceID = try CaptureSessionTransaction
+                            .configureAndStart(session) {
+                                try configure(
+                                    microphoneDeviceID: microphoneDeviceID
+                                )
+                            }
                         lock.withLock {
                             activeDeviceID = deviceID
                         }
-                        session.startRunning()
                         guard session.isRunning else {
                             throw RecorderError.captureFailed(
                                 "The selected microphone did not start."
@@ -396,9 +425,6 @@ public final class AVMicrophoneCaptureService:
     private func configure(
         microphoneDeviceID: String?
     ) throws -> String {
-        session.beginConfiguration()
-        defer { session.commitConfiguration() }
-
         for input in session.inputs {
             session.removeInput(input)
         }

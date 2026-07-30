@@ -11,6 +11,42 @@ extension RecorderCoreTestPlan {
 @Suite("Models and geometry")
 struct ModelsAndGeometryTests {
     @Test
+    func captureSessionCommitsConfigurationBeforeStarting() {
+        let session = CaptureSessionLifecycleSpy()
+
+        let configuredDevice = CaptureSessionTransaction
+            .configureAndStart(session) {
+                session.recordConfiguration()
+                return "microphone"
+            }
+
+        #expect(configuredDevice == "microphone")
+        #expect(
+            session.events
+                == [.beginConfiguration, .configure, .commitConfiguration, .start]
+        )
+        #expect(!session.startedWhileConfiguring)
+    }
+
+    @Test
+    func captureSessionCommitsAndDoesNotStartAfterConfigurationFailure() {
+        let session = CaptureSessionLifecycleSpy()
+
+        #expect(throws: CaptureSessionLifecycleTestError.self) {
+            try CaptureSessionTransaction.configureAndStart(session) {
+                session.recordConfiguration()
+                throw CaptureSessionLifecycleTestError.configurationFailed
+            }
+        }
+
+        #expect(
+            session.events
+                == [.beginConfiguration, .configure, .commitConfiguration]
+        )
+        #expect(!session.startedWhileConfiguring)
+    }
+
+    @Test
     func regionConversionUsesTopLeftCaptureCoordinates() {
         let result = NormalizedRect.from(
             displayLocalAppKitRect: CGRect(x: 100, y: 50, width: 400, height: 300),
@@ -253,6 +289,42 @@ struct ModelsAndGeometryTests {
         #expect(defaults.data(forKey: "folder") == nil)
     }
 }
+}
+
+private enum CaptureSessionLifecycleTestError: Error {
+    case configurationFailed
+}
+
+private final class CaptureSessionLifecycleSpy: CaptureSessionLifecycle {
+    enum Event: Equatable {
+        case beginConfiguration
+        case configure
+        case commitConfiguration
+        case start
+    }
+
+    private(set) var events = [Event]()
+    private(set) var startedWhileConfiguring = false
+    private var isConfiguring = false
+
+    func beginConfiguration() {
+        isConfiguring = true
+        events.append(.beginConfiguration)
+    }
+
+    func recordConfiguration() {
+        events.append(.configure)
+    }
+
+    func commitConfiguration() {
+        isConfiguring = false
+        events.append(.commitConfiguration)
+    }
+
+    func startRunning() {
+        startedWhileConfiguring = isConfiguring
+        events.append(.start)
+    }
 }
 
 private final class StubBookmarkCoder:
