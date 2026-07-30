@@ -44,6 +44,7 @@ public protocol VideoCompositor: AnyObject, Sendable {
     func render(
         screen: CVPixelBuffer?,
         camera: CVPixelBuffer?,
+        screenCrop: NormalizedRect?,
         mode: CaptureMode,
         overlay: OverlayLayout,
         outputSize: CGSize,

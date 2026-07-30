@@ -6,17 +6,22 @@ public final class ScreenCaptureTarget: @unchecked Sendable {
     public let filter: SCContentFilter?
     public let selection: ScreenSelection
     public let sourceRectInPoints: CGRect?
+    public let outputCrop: NormalizedRect?
     public let pointPixelScale: CGFloat
     public let contentPointSize: CGSize
 
     public init(
         filter: SCContentFilter,
         selection: ScreenSelection,
-        sourceRectInPoints: CGRect? = nil
+        sourceRectInPoints: CGRect? = nil,
+        outputCrop: NormalizedRect? = nil
     ) {
         self.filter = filter
         self.selection = selection
         self.sourceRectInPoints = sourceRectInPoints
+        self.outputCrop = outputCrop?.isValid == true
+            ? outputCrop
+            : nil
         pointPixelScale = max(1, CGFloat(filter.pointPixelScale))
         contentPointSize = filter.contentRect.size
     }
@@ -28,23 +33,80 @@ public final class ScreenCaptureTarget: @unchecked Sendable {
         selection: ScreenSelection,
         contentPointSize: CGSize,
         pointPixelScale: CGFloat,
-        sourceRectInPoints: CGRect? = nil
+        sourceRectInPoints: CGRect? = nil,
+        outputCrop: NormalizedRect? = nil
     ) {
         filter = nil
         self.selection = selection
         self.sourceRectInPoints = sourceRectInPoints
+        self.outputCrop = outputCrop?.isValid == true
+            ? outputCrop
+            : nil
         self.pointPixelScale = max(1, pointPixelScale)
         self.contentPointSize = contentPointSize
     }
 
-    public var pointSize: CGSize {
+    public var capturePointSize: CGSize {
         sourceRectInPoints?.size ?? contentPointSize
+    }
+
+    public var pointSize: CGSize {
+        guard let outputCrop else { return capturePointSize }
+        return outputCrop.denormalized(in: capturePointSize).size
+    }
+
+    public var capturePixelSize: CGSize {
+        CGSize(
+            width: capturePointSize.width * pointPixelScale,
+            height: capturePointSize.height * pointPixelScale
+        )
     }
 
     public var pixelSize: CGSize {
         CGSize(
             width: pointSize.width * pointPixelScale,
             height: pointSize.height * pointPixelScale
+        )
+    }
+
+    public func captureOutputSize(
+        for croppedOutputSize: CGSize
+    ) -> CGSize {
+        guard outputCrop != nil,
+              pixelSize.width > 0,
+              pixelSize.height > 0 else {
+            return croppedOutputSize
+        }
+        let scale = max(
+            croppedOutputSize.width / pixelSize.width,
+            croppedOutputSize.height / pixelSize.height
+        )
+        return CGSize(
+            width: Self.evenCeiling(capturePixelSize.width * scale),
+            height: Self.evenCeiling(capturePixelSize.height * scale)
+        )
+    }
+
+    public func applying(
+        windowContentCrop: WindowContentCrop?
+    ) -> ScreenCaptureTarget {
+        let crop = selection.kind == .window
+            ? windowContentCrop?.normalizedRect(in: capturePointSize)
+            : nil
+        if let filter {
+            return ScreenCaptureTarget(
+                filter: filter,
+                selection: selection,
+                sourceRectInPoints: sourceRectInPoints,
+                outputCrop: crop
+            )
+        }
+        return ScreenCaptureTarget(
+            selection: selection,
+            contentPointSize: contentPointSize,
+            pointPixelScale: pointPixelScale,
+            sourceRectInPoints: sourceRectInPoints,
+            outputCrop: crop
         )
     }
 
@@ -67,6 +129,11 @@ public final class ScreenCaptureTarget: @unchecked Sendable {
             selection: .region(displayID: displayID, displayName: displayName, rect: region),
             sourceRectInPoints: localRect
         )
+    }
+
+    private static func evenCeiling(_ value: CGFloat) -> CGFloat {
+        let rounded = max(2, Int(value.rounded(.up)))
+        return CGFloat(rounded + rounded % 2)
     }
 }
 

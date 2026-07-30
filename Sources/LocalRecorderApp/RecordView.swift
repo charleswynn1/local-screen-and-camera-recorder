@@ -106,6 +106,72 @@ struct RecordView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+                if model.hasSelectedWindow {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(
+                            "Web Content Only",
+                            isOn: Binding(
+                                get: {
+                                    model.recordsWindowContentOnly
+                                },
+                                set: {
+                                    model.setRecordsWindowContentOnly($0)
+                                }
+                            )
+                        )
+                        .toggleStyle(.switch)
+                        .accessibilityIdentifier(
+                            "web-content-only-toggle"
+                        )
+
+                        Text(
+                            "Hides Chrome tabs, the address bar, and bookmarks by cropping the top of the selected window."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        if model.recordsWindowContentOnly {
+                            HStack(spacing: 10) {
+                                Text("Browser controls")
+                                    .font(.callout)
+                                Slider(
+                                    value: Binding(
+                                        get: {
+                                            model.windowControlsHeightPoints
+                                        },
+                                        set: {
+                                            model.setWindowControlsHeightPoints(
+                                                $0
+                                            )
+                                        }
+                                    ),
+                                    in: 40
+                                        ... model
+                                            .maximumWindowControlsHeightPoints,
+                                    step: 2
+                                )
+                                .accessibilityIdentifier(
+                                    "browser-controls-height"
+                                )
+                                Text(
+                                    "\(Int(model.windowControlsHeightPoints)) pt"
+                                )
+                                .font(.callout.monospacedDigit())
+                                .frame(width: 52, alignment: .trailing)
+                            }
+                            Text(
+                                "Adjust until the preview begins exactly at the top of the webpage."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        Color(nsColor: .controlBackgroundColor),
+                        in: RoundedRectangle(cornerRadius: 10)
+                    )
+                }
             }
         }
     }

@@ -29,6 +29,7 @@ public final class MetalVideoCompositor: VideoCompositor, @unchecked Sendable {
     public func render(
         screen: CVPixelBuffer?,
         camera: CVPixelBuffer?,
+        screenCrop: NormalizedRect?,
         mode: CaptureMode,
         overlay: OverlayLayout,
         outputSize: CGSize,
@@ -50,13 +51,21 @@ public final class MetalVideoCompositor: VideoCompositor, @unchecked Sendable {
         switch mode {
         case .screen:
             guard let screen else { throw RecorderError.noVideoFrames }
-            composed = fit(CIImage(cvPixelBuffer: screen), into: canvas, background: black)
+            composed = fit(
+                try screenImage(screen, crop: screenCrop),
+                into: canvas,
+                background: black
+            )
         case .camera:
             guard let camera else { throw RecorderError.noVideoFrames }
             composed = fill(CIImage(cvPixelBuffer: camera), into: canvas)
         case .combined:
             guard let screen else { throw RecorderError.noVideoFrames }
-            let base = fit(CIImage(cvPixelBuffer: screen), into: canvas, background: black)
+            let base = fit(
+                try screenImage(screen, crop: screenCrop),
+                into: canvas,
+                background: black
+            )
             guard let camera else {
                 composed = base
                 break
@@ -77,6 +86,25 @@ public final class MetalVideoCompositor: VideoCompositor, @unchecked Sendable {
             colorSpace: colorSpace
         )
         return output
+    }
+
+    private func screenImage(
+        _ pixelBuffer: CVPixelBuffer,
+        crop: NormalizedRect?
+    ) throws -> CIImage {
+        let image = CIImage(cvPixelBuffer: pixelBuffer)
+        guard let crop else { return image }
+        let cropRect = crop
+            .denormalizedFromTopLeft(
+                inBottomLeftCoordinatesOf: image.extent
+            )
+            .intersection(image.extent)
+        guard cropRect.width >= 1, cropRect.height >= 1 else {
+            throw RecorderError.invalidConfiguration(
+                "The window content crop is outside the captured frame."
+            )
+        }
+        return image.cropped(to: cropRect)
     }
 
     private func fit(_ image: CIImage, into destination: CGRect, background: CIImage) -> CIImage {

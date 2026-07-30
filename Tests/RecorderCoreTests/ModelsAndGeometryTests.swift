@@ -1,5 +1,6 @@
 import CoreGraphics
 import CoreMedia
+import CoreVideo
 import Darwin
 import Foundation
 @preconcurrency import ScreenCaptureKit
@@ -184,6 +185,105 @@ struct ModelsAndGeometryTests {
     }
 
     @Test
+    func webContentCropRemovesBrowserControlsFromPreviewAndRecordingGeometry() {
+        let rawTarget = ScreenCaptureTarget(
+            selection: .window(
+                id: 42,
+                title: "New Tab — Google Chrome"
+            ),
+            contentPointSize: CGSize(width: 1_300, height: 864),
+            pointPixelScale: 2
+        )
+        let configuration = RecordingConfiguration(
+            mode: .screen,
+            screenSelection: rawTarget.selection,
+            capturesSystemAudio: false,
+            capturesMicrophone: false,
+            windowContentCrop: WindowContentCrop(
+                topInsetPoints: 120
+            )
+        )
+        let request = RecordingRequest(
+            configuration: configuration,
+            screenTarget: rawTarget,
+            destinationFolder: URL(fileURLWithPath: "/tmp")
+        )
+
+        let target = request.resolvedScreenTarget
+        #expect(target != nil)
+        #expect(target?.capturePointSize == CGSize(width: 1_300, height: 864))
+        #expect(target?.pointSize == CGSize(width: 1_300, height: 744))
+        #expect(target?.pixelSize == CGSize(width: 2_600, height: 1_488))
+
+        let outputSize = OutputGeometry.outputSize(
+            sourceSize: target?.pixelSize ?? .zero,
+            preset: .standard
+        )
+        let captureSize = target?.captureOutputSize(
+            for: outputSize
+        ) ?? .zero
+        let cropRect = target?.outputCrop?
+            .denormalizedFromTopLeft(
+                inBottomLeftCoordinatesOf: CGRect(
+                    origin: .zero,
+                    size: captureSize
+                )
+            ) ?? .zero
+
+        #expect(captureSize.height > outputSize.height)
+        #expect(abs(cropRect.minY) < 0.001)
+        #expect(abs(cropRect.width - outputSize.width) < 3)
+        #expect(abs(cropRect.height - outputSize.height) < 3)
+    }
+
+    @Test
+    func webContentCropDoesNotAffectDisplayCapture() {
+        let rawTarget = ScreenCaptureTarget(
+            selection: .display(id: 1, name: "Display"),
+            contentPointSize: CGSize(width: 1_512, height: 982),
+            pointPixelScale: 2
+        )
+        let resolved = rawTarget.applying(
+            windowContentCrop: WindowContentCrop(
+                topInsetPoints: 120
+            )
+        )
+
+        #expect(resolved.outputCrop == nil)
+        #expect(resolved.pointSize == rawTarget.pointSize)
+    }
+
+    @Test
+    func webContentCropRemovesTopPixelsInMetalCompositor() throws {
+        let screen = try makeBrowserTestPixelBuffer()
+        let outputPool = try makeBrowserTestOutputPool()
+        let compositor = try MetalVideoCompositor()
+
+        let output = try compositor.render(
+            screen: screen,
+            camera: nil,
+            screenCrop: NormalizedRect(
+                x: 0,
+                y: 0.5,
+                width: 1,
+                height: 0.5
+            ),
+            mode: .screen,
+            overlay: OverlayLayout(),
+            outputSize: CGSize(width: 100, height: 50),
+            pool: outputPool
+        )
+        let pixel = readBGRA(
+            from: output,
+            x: 50,
+            y: 5
+        )
+
+        #expect(pixel.green > pixel.red + 100)
+        #expect(pixel.green > pixel.blue + 100)
+    }
+
+    @Test
     func overlayFramesStayInsideCanvasForAllSizesAndCorners() {
         let canvas = CGSize(width: 1_920, height: 1_080)
         for size in OverlaySize.allCases {
@@ -364,6 +464,84 @@ struct ModelsAndGeometryTests {
         #expect(defaults.data(forKey: "folder") == nil)
     }
 }
+}
+
+private func makeBrowserTestPixelBuffer() throws -> CVPixelBuffer {
+    var pixelBuffer: CVPixelBuffer?
+    let status = CVPixelBufferCreate(
+        kCFAllocatorDefault,
+        100,
+        100,
+        kCVPixelFormatType_32BGRA,
+        [
+            kCVPixelBufferMetalCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary
+        ] as CFDictionary,
+        &pixelBuffer
+    )
+    guard status == kCVReturnSuccess, let pixelBuffer else {
+        throw RecorderError.noVideoFrames
+    }
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, [])
+    defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
+    guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+        throw RecorderError.noVideoFrames
+    }
+    let bytes = baseAddress.assumingMemoryBound(to: UInt8.self)
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+    for y in 0..<100 {
+        for x in 0..<100 {
+            let offset = y * bytesPerRow + x * 4
+            let isBrowserControls = y < 50
+            bytes[offset] = 0
+            bytes[offset + 1] = isBrowserControls ? 0 : 255
+            bytes[offset + 2] = isBrowserControls ? 255 : 0
+            bytes[offset + 3] = 255
+        }
+    }
+    return pixelBuffer
+}
+
+private func makeBrowserTestOutputPool() throws -> CVPixelBufferPool {
+    var pool: CVPixelBufferPool?
+    let status = CVPixelBufferPoolCreate(
+        kCFAllocatorDefault,
+        nil,
+        [
+            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey: 100,
+            kCVPixelBufferHeightKey: 50,
+            kCVPixelBufferMetalCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary
+        ] as CFDictionary,
+        &pool
+    )
+    guard status == kCVReturnSuccess, let pool else {
+        throw RecorderError.noVideoFrames
+    }
+    return pool
+}
+
+private func readBGRA(
+    from pixelBuffer: CVPixelBuffer,
+    x: Int,
+    y: Int
+) -> (blue: Int, green: Int, red: Int) {
+    CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+    defer {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+    }
+    guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+        return (0, 0, 0)
+    }
+    let bytes = baseAddress.assumingMemoryBound(to: UInt8.self)
+    let offset = y * CVPixelBufferGetBytesPerRow(pixelBuffer) + x * 4
+    return (
+        Int(bytes[offset]),
+        Int(bytes[offset + 1]),
+        Int(bytes[offset + 2])
+    )
 }
 
 private enum CaptureSessionLifecycleTestError: Error {

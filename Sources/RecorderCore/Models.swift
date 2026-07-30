@@ -108,6 +108,18 @@ public struct NormalizedRect: Codable, Equatable, Sendable {
         )
     }
 
+    public func denormalizedFromTopLeft(
+        inBottomLeftCoordinatesOf extent: CGRect
+    ) -> CGRect {
+        let topLeftRect = denormalized(in: extent.size)
+        return CGRect(
+            x: extent.minX + topLeftRect.minX,
+            y: extent.maxY - topLeftRect.maxY,
+            width: topLeftRect.width,
+            height: topLeftRect.height
+        )
+    }
+
     public func denormalizedInPixels(
         displayPointSize: CGSize,
         pointPixelScale: CGFloat
@@ -154,6 +166,38 @@ public enum ScreenSelection: Codable, Equatable, Sendable {
         case let .window(_, title): title
         case let .region(_, displayName, _): "\(displayName) Region"
         }
+    }
+}
+
+public struct WindowContentCrop: Codable, Equatable, Sendable {
+    public static let defaultTopInsetPoints = 120.0
+
+    public var topInsetPoints: Double
+
+    public init(
+        topInsetPoints: Double = WindowContentCrop.defaultTopInsetPoints
+    ) {
+        self.topInsetPoints = topInsetPoints
+    }
+
+    public func normalizedRect(
+        in contentSize: CGSize
+    ) -> NormalizedRect? {
+        guard topInsetPoints.isFinite,
+              contentSize.width > 0,
+              contentSize.height >= 2 else {
+            return nil
+        }
+        let inset = min(
+            max(CGFloat(topInsetPoints), 0),
+            contentSize.height - 2
+        )
+        return NormalizedRect(
+            x: 0,
+            y: inset / contentSize.height,
+            width: 1,
+            height: (contentSize.height - inset) / contentSize.height
+        )
     }
 }
 
@@ -310,6 +354,7 @@ public struct RecordingConfiguration: Codable, Equatable, Sendable {
     public var capturesMicrophone: Bool
     public var quality: QualityPreset
     public var overlay: OverlayLayout
+    public var windowContentCrop: WindowContentCrop?
     public var showsCursor: Bool
     public var showsMouseClicks: Bool
 
@@ -322,6 +367,7 @@ public struct RecordingConfiguration: Codable, Equatable, Sendable {
         capturesMicrophone: Bool = true,
         quality: QualityPreset = .standard,
         overlay: OverlayLayout = OverlayLayout(),
+        windowContentCrop: WindowContentCrop? = nil,
         showsCursor: Bool = true,
         showsMouseClicks: Bool = false
     ) {
@@ -333,6 +379,7 @@ public struct RecordingConfiguration: Codable, Equatable, Sendable {
         self.capturesMicrophone = capturesMicrophone
         self.quality = quality
         self.overlay = overlay
+        self.windowContentCrop = windowContentCrop
         self.showsCursor = showsCursor
         self.showsMouseClicks = showsMouseClicks
         normalizeForMode()
@@ -358,6 +405,7 @@ public struct RecordingConfiguration: Codable, Equatable, Sendable {
         if !mode.needsScreen {
             capturesSystemAudio = false
             screenSelection = nil
+            windowContentCrop = nil
         }
     }
 
@@ -543,6 +591,12 @@ public struct RecordingRequest: @unchecked Sendable {
         self.configuration = configuration
         self.screenTarget = screenTarget
         self.destinationFolder = destinationFolder
+    }
+
+    public var resolvedScreenTarget: ScreenCaptureTarget? {
+        screenTarget?.applying(
+            windowContentCrop: configuration.windowContentCrop
+        )
     }
 }
 

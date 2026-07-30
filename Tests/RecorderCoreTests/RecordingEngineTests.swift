@@ -971,6 +971,7 @@ private final class NoopVideoCompositor: VideoCompositor, @unchecked Sendable {
     func render(
         screen: CVPixelBuffer?,
         camera: CVPixelBuffer?,
+        screenCrop: NormalizedRect?,
         mode: CaptureMode,
         overlay: OverlayLayout,
         outputSize: CGSize,
@@ -987,6 +988,7 @@ private final class SolidVideoCompositor:
     func render(
         screen: CVPixelBuffer?,
         camera: CVPixelBuffer?,
+        screenCrop: NormalizedRect?,
         mode: CaptureMode,
         overlay: OverlayLayout,
         outputSize: CGSize,

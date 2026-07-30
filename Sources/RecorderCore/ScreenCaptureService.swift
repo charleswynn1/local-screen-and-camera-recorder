@@ -30,8 +30,11 @@ public final class ScreenCaptureService: NSObject, ScreenSource, SCStreamOutput,
         isStopping = false
 
         let streamConfiguration = SCStreamConfiguration()
-        streamConfiguration.width = Int(configuration.outputSize.width)
-        streamConfiguration.height = Int(configuration.outputSize.height)
+        let captureSize = target.captureOutputSize(
+            for: configuration.outputSize
+        )
+        streamConfiguration.width = Int(captureSize.width)
+        streamConfiguration.height = Int(captureSize.height)
         streamConfiguration.minimumFrameInterval = CMTime(
             value: 1,
             timescale: configuration.framesPerSecond

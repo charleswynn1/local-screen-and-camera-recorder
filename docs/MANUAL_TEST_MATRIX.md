@@ -17,6 +17,7 @@ Run this matrix on a release-signed Apple Silicon MacBook with macOS 15 before p
 - Record the built-in display at Compact, Standard, and High quality.
 - Record a second display and confirm the floating controller is excluded.
 - Record a normal window, a window partially off-screen, and a window with child panels.
+- Select a Chrome window, enable **Web Content Only**, adjust the browser-controls height, and confirm tabs, address bar, and bookmarks are absent from both preview and MP4 output.
 - Close the selected window during recording and verify a playable partial result is finalized.
 - Select regions at every display edge and with Retina scaling enabled.
 - Attempt a cross-display drag and confirm selection remains constrained to its starting display.

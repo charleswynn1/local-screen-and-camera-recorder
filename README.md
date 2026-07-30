@@ -6,6 +6,7 @@ Local Recorder is a private, offline macOS screen-and-camera recorder. It record
 
 - Screen-only, camera-only, and screen-plus-camera modes
 - Full-display, single-window, and one-display region capture
+- Adjustable **Web Content Only** crop for hiding Chrome tabs, address bar, and bookmarks
 - Built-in, USB/UVC, and Continuity Camera selection
 - Movable small, medium, or large rounded camera overlay
 - Independent system-audio and microphone controls with live level meters

@@ -7,8 +7,9 @@ public struct LiveRecordingPipelineFactory: RecordingPipelineFactory {
     public init() {}
 
     public func makePipeline(for request: RecordingRequest) throws -> any RecordingPipeline {
+        let resolvedScreenTarget = request.resolvedScreenTarget
         let issues = request.configuration.validationIssues(
-            hasResolvedScreenTarget: request.screenTarget != nil
+            hasResolvedScreenTarget: resolvedScreenTarget != nil
         )
         if let issue = issues.first {
             throw RecorderError.invalidConfiguration(issue.message)
@@ -16,7 +17,7 @@ public struct LiveRecordingPipelineFactory: RecordingPipelineFactory {
 
         let sourceSize: CGSize
         if request.configuration.mode.needsScreen {
-            guard let target = request.screenTarget else {
+            guard let target = resolvedScreenTarget else {
                 throw RecorderError.invalidConfiguration(ConfigurationIssue.missingScreenSelection.message)
             }
             sourceSize = target.pixelSize
@@ -42,8 +43,13 @@ public struct LiveRecordingPipelineFactory: RecordingPipelineFactory {
             includesAudio: request.configuration.capturesSystemAudio
                 || request.configuration.capturesMicrophone
         )
+        let resolvedRequest = RecordingRequest(
+            configuration: request.configuration,
+            screenTarget: resolvedScreenTarget,
+            destinationFolder: request.destinationFolder
+        )
         return try LiveRecordingPipeline(
-            request: request,
+            request: resolvedRequest,
             outputSize: outputSize,
             screenSource: ScreenCaptureService(),
             cameraSource: AVCameraCaptureService(),
@@ -378,6 +384,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
             let frame = try compositor.render(
                 screen: screen,
                 camera: camera,
+                screenCrop: request.screenTarget?.outputCrop,
                 mode: request.configuration.mode,
                 overlay: request.configuration.overlay,
                 outputSize: outputSize,

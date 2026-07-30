@@ -60,6 +60,7 @@ final class AppModel: ObservableObject {
             || arguments.contains("--ui-testing-unready")
             || arguments.contains("--ui-testing-recording-controller")
             || arguments.contains("--ui-testing-selecting")
+            || arguments.contains("--ui-testing-window-content")
 #else
         return false
 #endif
@@ -116,6 +117,25 @@ final class AppModel: ObservableObject {
             return false
         }
         return [.idle, .completed, .failed].contains(snapshot.phase)
+    }
+
+    var hasSelectedWindow: Bool {
+        screenTarget != nil
+            && configuration.screenSelection?.kind == .window
+    }
+
+    var recordsWindowContentOnly: Bool {
+        hasSelectedWindow && configuration.windowContentCrop != nil
+    }
+
+    var windowControlsHeightPoints: Double {
+        configuration.windowContentCrop?.topInsetPoints
+            ?? WindowContentCrop.defaultTopInsetPoints
+    }
+
+    var maximumWindowControlsHeightPoints: Double {
+        let height = screenTarget?.capturePointSize.height ?? 360
+        return Double(max(41, min(300, height - 80)))
     }
 
     var elapsedText: String {
@@ -209,6 +229,33 @@ final class AppModel: ObservableObject {
         configuration.overlay.corner = corner
     }
 
+    func setRecordsWindowContentOnly(_ enabled: Bool) {
+        guard hasSelectedWindow else { return }
+        if enabled {
+            configuration.windowContentCrop = WindowContentCrop(
+                topInsetPoints: min(
+                    WindowContentCrop.defaultTopInsetPoints,
+                    maximumWindowControlsHeightPoints
+                )
+            )
+        } else {
+            configuration.windowContentCrop = nil
+        }
+        startScreenPreview()
+    }
+
+    func setWindowControlsHeightPoints(_ height: Double) {
+        guard hasSelectedWindow,
+              configuration.windowContentCrop != nil else {
+            return
+        }
+        configuration.windowContentCrop?.topInsetPoints = min(
+            max(height, 40),
+            maximumWindowControlsHeightPoints
+        )
+        startScreenPreview()
+    }
+
     func chooseScreen(_ kind: ScreenSelectionKind) async {
         guard !isChoosingScreen else { return }
         isChoosingScreen = true
@@ -244,6 +291,7 @@ final class AppModel: ObservableObject {
                 throw RecorderError.cancelled
             }
             screenTarget = target
+            configuration.windowContentCrop = nil
             configuration.screenSelection = target.selection
             await engine.endSelection()
             refreshPermissions()
@@ -577,7 +625,7 @@ final class AppModel: ObservableObject {
 
         let sourceSize: CGSize
         if configuration.mode.needsScreen {
-            guard let screenTarget else {
+            guard let screenTarget = resolvedScreenTarget else {
                 highQualityIssue = nil
                 return
             }
@@ -695,7 +743,7 @@ final class AppModel: ObservableObject {
 
     private func startScreenPreview() {
         previewTask?.cancel()
-        guard let target = screenTarget else {
+        guard let target = resolvedScreenTarget else {
             screenPreview = nil
             return
         }
@@ -835,6 +883,7 @@ final class AppModel: ObservableObject {
         guard !isUITesting else { return }
         var stored = configuration
         stored.screenSelection = nil
+        stored.windowContentCrop = nil
         if let data = try? JSONEncoder().encode(stored) {
             UserDefaults.standard.set(data, forKey: "recordingConfiguration")
         }
@@ -846,7 +895,14 @@ final class AppModel: ObservableObject {
             return RecordingConfiguration()
         }
         settings.screenSelection = nil
+        settings.windowContentCrop = nil
         return settings
+    }
+
+    private var resolvedScreenTarget: ScreenCaptureTarget? {
+        screenTarget?.applying(
+            windowContentCrop: configuration.windowContentCrop
+        )
     }
 
 #if DEBUG
@@ -856,14 +912,20 @@ final class AppModel: ObservableObject {
             "--ui-testing-recording-controller"
         )
         let isSelecting = arguments.contains("--ui-testing-selecting")
+        let isWindowContentTest = arguments.contains(
+            "--ui-testing-window-content"
+        )
         let isReady = arguments.contains("--ui-testing-ready")
             || isControllerTest
             || isSelecting
+            || isWindowContentTest
         let isUnready = arguments.contains("--ui-testing-unready")
         guard isReady || isUnready else { return false }
 
         configuration = RecordingConfiguration(
-            mode: isSelecting ? .screen : .camera,
+            mode: isSelecting || isWindowContentTest
+                ? .screen
+                : .camera,
             cameraDeviceID: "ui-test-camera",
             microphoneDeviceID: "ui-test-microphone",
             capturesSystemAudio: false,
@@ -892,6 +954,18 @@ final class AppModel: ObservableObject {
         screenTarget = nil
         screenPreview = nil
         highQualityIssue = nil
+        if isWindowContentTest {
+            let target = ScreenCaptureTarget(
+                selection: .window(
+                    id: 42,
+                    title: "New Tab — Google Chrome"
+                ),
+                contentPointSize: CGSize(width: 1_300, height: 864),
+                pointPixelScale: 2
+            )
+            screenTarget = target
+            configuration.screenSelection = target.selection
+        }
 
         guard isReady else {
             folderURL = nil

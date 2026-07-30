@@ -122,6 +122,38 @@ final class LocalRecorderUITests: XCTestCase {
     }
 
     @MainActor
+    func testWindowCaptureOffersAdjustableWebContentOnlyCrop() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-window-content"
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["New Tab — Google Chrome"]
+                .waitForExistence(timeout: 5)
+        )
+        let toggle = app.descendants(matching: .any)[
+            "web-content-only-toggle"
+        ]
+        XCTAssertTrue(toggle.exists)
+
+        toggle.click()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)[
+                "browser-controls-height"
+            ].waitForExistence(timeout: 2)
+        )
+        XCTAssertTrue(
+            app.staticTexts[
+                "Adjust until the preview begins exactly at the top of the webpage."
+            ].exists
+        )
+    }
+
+    @MainActor
     func testCameraOnlyRecordingPreviewCanBeHiddenAndRestored() throws {
         let app = XCUIApplication()
         app.launchArguments = [
