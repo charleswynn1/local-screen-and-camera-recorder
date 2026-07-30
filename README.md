@@ -30,6 +30,8 @@ The command-line tools currently selected on the development Mac can compile and
 
 Open `LocalRecorder.xcodeproj`, select the **LocalRecorder** scheme, and run the app. Xcode will apply the sandbox, camera, microphone, user-selected-file, and hardened-runtime settings.
 
+Debug app builds use a stable ad-hoc designated requirement so macOS privacy grants survive recompilation. This setting is Debug-only; Developer ID Release signing remains unchanged.
+
 Command-line validation:
 
 ```sh

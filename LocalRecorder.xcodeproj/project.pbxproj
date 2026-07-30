@@ -606,6 +606,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LocalRecorder/Info.plist;
@@ -614,6 +615,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"$(PRODUCT_BUNDLE_IDENTIFIER)\"'";
 				PRODUCT_BUNDLE_IDENTIFIER = com.charleswynn.localrecorder;
 				PRODUCT_NAME = "Local Recorder";
 				SWIFT_EMIT_LOC_STRINGS = YES;

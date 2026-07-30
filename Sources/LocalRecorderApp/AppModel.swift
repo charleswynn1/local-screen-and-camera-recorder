@@ -165,6 +165,7 @@ final class AppModel: ObservableObject {
         guard configuration.mode != mode else { return }
         if isChoosingScreen {
             picker.cancelPending()
+            regionSelector.cancelPending()
         }
         if snapshot.phase == .selecting {
             Task { await engine.endSelection() }
@@ -219,32 +220,28 @@ final class AppModel: ObservableObject {
                 throw RecorderError.permissionDenied(.screen)
             }
             await engine.beginSelection()
-            let picked = try await picker.pick(
-                kind: kind,
-                excludingBundleID: Bundle.main.bundleIdentifier
-            )
+            let target: ScreenCaptureTarget
+            switch kind.selectionRoute {
+            case .contentSharingPicker:
+                target = try await picker.pick(
+                    kind: kind,
+                    excludingBundleID: Bundle.main.bundleIdentifier
+                )
+            case .regionOverlay:
+                let selection = try await regionSelector.selectRegion()
+                let displayTarget = try await ScreenDisplayTargetResolver.resolve(
+                    displayID: selection.displayID,
+                    displayName: selection.displayName,
+                    excludingBundleID: Bundle.main.bundleIdentifier
+                )
+                target = displayTarget.applying(
+                    region: selection.rect,
+                    displayID: selection.displayID,
+                    displayName: selection.displayName
+                )
+            }
             guard configuration.mode.needsScreen else {
                 throw RecorderError.cancelled
-            }
-            let target: ScreenCaptureTarget
-            if kind == .region {
-                let rect = try await regionSelector.selectRegion(for: picked)
-                let displayID: UInt32?
-                let displayName: String
-                if case let .display(id, name) = picked.selection {
-                    displayID = id
-                    displayName = name
-                } else {
-                    displayID = nil
-                    displayName = "Selected Display"
-                }
-                target = picked.applying(
-                    region: rect,
-                    displayID: displayID,
-                    displayName: displayName
-                )
-            } else {
-                target = picked
             }
             screenTarget = target
             configuration.screenSelection = target.selection

@@ -51,6 +51,20 @@ public enum ScreenSelectionKind: String, Codable, CaseIterable, Identifiable, Se
         case .region: "viewfinder"
         }
     }
+
+    public var selectionRoute: ScreenSelectionRoute {
+        switch self {
+        case .display, .window:
+            .contentSharingPicker
+        case .region:
+            .regionOverlay
+        }
+    }
+}
+
+public enum ScreenSelectionRoute: Equatable, Sendable {
+    case contentSharingPicker
+    case regionOverlay
 }
 
 public struct NormalizedRect: Codable, Equatable, Sendable {

@@ -69,3 +69,64 @@ public final class ScreenCaptureTarget: @unchecked Sendable {
         )
     }
 }
+
+public enum ScreenDisplayTargetResolver {
+    public static func resolve(
+        displayID: UInt32,
+        displayName: String,
+        excludingBundleID: String?
+    ) async throws -> ScreenCaptureTarget {
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(
+                false,
+                onScreenWindowsOnly: true
+            )
+            guard let display = content.displays.first(where: {
+                $0.displayID == displayID
+            }) else {
+                throw RecorderError.captureFailed(
+                    "The selected display is no longer available."
+                )
+            }
+
+            let excludedApplications: [SCRunningApplication]
+            let excludedWindows: [SCWindow]
+            if let excludingBundleID {
+                excludedApplications = content.applications.filter {
+                    $0.bundleIdentifier == excludingBundleID
+                }
+                excludedWindows = content.windows.filter {
+                    $0.owningApplication?.bundleIdentifier
+                        == excludingBundleID
+                }
+            } else {
+                excludedApplications = []
+                excludedWindows = []
+            }
+            let filter: SCContentFilter
+            if excludedApplications.isEmpty {
+                filter = SCContentFilter(
+                    display: display,
+                    excludingWindows: excludedWindows
+                )
+            } else {
+                filter = SCContentFilter(
+                    display: display,
+                    excludingApplications: excludedApplications,
+                    exceptingWindows: []
+                )
+            }
+
+            return ScreenCaptureTarget(
+                filter: filter,
+                selection: .display(id: displayID, name: displayName)
+            )
+        } catch let error as RecorderError {
+            throw error
+        } catch {
+            throw RecorderError.captureFailed(
+                "Could not prepare the selected display: \(error.localizedDescription)"
+            )
+        }
+    }
+}

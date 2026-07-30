@@ -13,6 +13,22 @@ extension RecorderCoreTestPlan {
 @Suite("Models and geometry")
 struct ModelsAndGeometryTests {
     @Test
+    func regionSelectionBypassesTheFullDisplaySharingPicker() {
+        #expect(
+            ScreenSelectionKind.display.selectionRoute
+                == .contentSharingPicker
+        )
+        #expect(
+            ScreenSelectionKind.window.selectionRoute
+                == .contentSharingPicker
+        )
+        #expect(
+            ScreenSelectionKind.region.selectionRoute
+                == .regionOverlay
+        )
+    }
+
+    @Test
     @MainActor
     func screenPickerCancellationCallbackCanArriveOffMainExecutor() async {
         let picker = ScreenContentPicker()

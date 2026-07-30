@@ -3,89 +3,106 @@ import RecorderCore
 
 @MainActor
 final class RegionSelectionController {
-    private var window: RegionSelectionWindow?
-    private var continuation: CheckedContinuation<NormalizedRect, Error>?
+    struct Result {
+        let displayID: UInt32
+        let displayName: String
+        let rect: NormalizedRect
+    }
 
-    func selectRegion(for target: ScreenCaptureTarget) async throws -> NormalizedRect {
+    private var windows = [RegionSelectionWindow]()
+    private var continuation: CheckedContinuation<Result, Error>?
+
+    func selectRegion() async throws -> Result {
         guard continuation == nil else {
             throw RecorderError.captureFailed("A region selector is already open.")
         }
-        let screen = matchingScreen(for: target) ?? NSScreen.main ?? NSScreen.screens.first
-        guard let screen else {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else {
             throw RecorderError.captureFailed("No display is available for region selection.")
         }
 
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
-            let selectionView = RegionSelectionView(frame: CGRect(origin: .zero, size: screen.frame.size))
-            selectionView.onComplete = { [weak self] rect in
-                guard let self else { return }
-                let normalized = NormalizedRect.from(
-                    displayLocalAppKitRect: rect,
-                    displaySize: screen.frame.size
+            for screen in screens {
+                let selectionView = RegionSelectionView(
+                    frame: CGRect(origin: .zero, size: screen.frame.size)
                 )
-                finish(.success(normalized))
+                selectionView.onComplete = { [weak self] rect in
+                    guard let self else { return }
+                    guard let displayID = Self.displayID(for: screen) else {
+                        finish(
+                            .failure(
+                                RecorderError.captureFailed(
+                                    "The selected display could not be identified."
+                                )
+                            )
+                        )
+                        return
+                    }
+                    finish(
+                        .success(
+                            Result(
+                                displayID: displayID,
+                                displayName: screen.localizedName,
+                                rect: NormalizedRect.from(
+                                    displayLocalAppKitRect: rect,
+                                    displaySize: screen.frame.size
+                                )
+                            )
+                        )
+                    )
+                }
+                selectionView.onCancel = { [weak self] in
+                    self?.finish(.failure(RecorderError.cancelled))
+                }
+                let window = RegionSelectionWindow(
+                    contentRect: screen.frame,
+                    styleMask: .borderless,
+                    backing: .buffered,
+                    defer: false,
+                    screen: screen
+                )
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                window.level = .screenSaver
+                window.collectionBehavior = [
+                    .canJoinAllSpaces,
+                    .fullScreenAuxiliary
+                ]
+                window.contentView = selectionView
+                window.orderFrontRegardless()
+                windows.append(window)
             }
-            selectionView.onCancel = { [weak self] in
-                self?.finish(.failure(RecorderError.cancelled))
-            }
-            let window = RegionSelectionWindow(
-                contentRect: screen.frame,
-                styleMask: .borderless,
-                backing: .buffered,
-                defer: false,
-                screen: screen
-            )
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            window.level = .screenSaver
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            window.contentView = selectionView
-            window.makeKeyAndOrderFront(nil)
-            window.makeFirstResponder(selectionView)
+
             NSApp.activate(ignoringOtherApps: true)
-            self.window = window
+            let keyWindow = windows.first(where: {
+                $0.screen == NSScreen.main
+            }) ?? windows.first
+            keyWindow?.makeKey()
+            if let selectionView = keyWindow?.contentView {
+                keyWindow?.makeFirstResponder(selectionView)
+            }
         }
     }
 
-    private func matchingScreen(for target: ScreenCaptureTarget) -> NSScreen? {
-        let selectedDisplayID: UInt32?
-        switch target.selection {
-        case let .display(id, _):
-            selectedDisplayID = id
-        case let .region(id, _, _):
-            selectedDisplayID = id
-        case .window:
-            selectedDisplayID = nil
-        }
-        if let selectedDisplayID,
-           let exact = NSScreen.screens.first(where: {
-               (
-                   $0.deviceDescription[
-                       NSDeviceDescriptionKey("NSScreenNumber")
-                   ] as? NSNumber
-               )?.uint32Value == selectedDisplayID
-           }) {
-            return exact
-        }
-        guard target.filter != nil else { return NSScreen.main }
-        return NSScreen.screens.min { lhs, rhs in
-            score(lhs, target: target) < score(rhs, target: target)
-        }
+    func cancelPending() {
+        guard continuation != nil else { return }
+        finish(.failure(RecorderError.cancelled))
     }
 
-    private func score(_ screen: NSScreen, target: ScreenCaptureTarget) -> CGFloat {
-        guard let filter = target.filter else { return .greatestFiniteMagnitude }
-        return abs(screen.frame.width - filter.contentRect.width)
-            + abs(screen.frame.height - filter.contentRect.height)
-            + abs(screen.frame.minX - filter.contentRect.minX)
-            + abs(screen.frame.minY - filter.contentRect.minY)
-            + abs(screen.backingScaleFactor - target.pointPixelScale) * 100
+    private static func displayID(for screen: NSScreen) -> UInt32? {
+        (
+            screen.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")
+            ] as? NSNumber
+        )?.uint32Value
     }
 
-    private func finish(_ result: Result<NormalizedRect, Error>) {
-        window?.orderOut(nil)
-        window = nil
+    private func finish(_ result: Swift.Result<Result, Error>) {
+        for window in windows {
+            window.orderOut(nil)
+        }
+        windows.removeAll()
         continuation?.resume(with: result)
         continuation = nil
     }
@@ -104,6 +121,8 @@ final class RegionSelectionView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func mouseDown(with event: NSEvent) {
+        window?.makeKey()
+        window?.makeFirstResponder(self)
         anchor = convert(event.locationInWindow, from: nil)
         selection = .zero
         needsDisplay = true
