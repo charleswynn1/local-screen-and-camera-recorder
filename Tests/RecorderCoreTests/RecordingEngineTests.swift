@@ -65,6 +65,52 @@ struct RecordingEngineTests {
     }
 
     @Test
+    func combinedRecordingCanToggleCameraWithoutStoppingScreen() async throws {
+        let output = URL(
+            fileURLWithPath: "/tmp/combined-camera-toggle.mp4"
+        )
+        let pipeline = FakePipeline(outputURL: output)
+        let engine = RecordingEngine(
+            factory: FakePipelineFactory(pipeline: pipeline)
+        )
+        let setup = makeSetup(
+            mode: .combined,
+            screenKind: .display,
+            systemAudio: true,
+            microphone: true
+        )
+
+        try await engine.start(
+            RecordingRequest(
+                configuration: setup.configuration,
+                screenTarget: setup.target,
+                destinationFolder: URL(fileURLWithPath: "/tmp")
+            ),
+            countdown: 0
+        )
+        #expect(await engine.currentSnapshot().isCameraEnabled)
+
+        try await engine.setCameraEnabled(false)
+        #expect(await engine.currentSnapshot().phase == .recording)
+        #expect(await !engine.currentSnapshot().isCameraEnabled)
+
+        try await engine.setCameraEnabled(true)
+        #expect(await engine.currentSnapshot().phase == .recording)
+        #expect(await engine.currentSnapshot().isCameraEnabled)
+
+        #expect(try await engine.stop() == output)
+        #expect(
+            pipeline.calls == [
+                .prepare,
+                .start,
+                .setCameraEnabled(false),
+                .setCameraEnabled(true),
+                .stop
+            ]
+        )
+    }
+
+    @Test
     func recordingPreviewFramesAreForwardedWhileRecording() async throws {
         let output = URL(fileURLWithPath: "/tmp/preview.mp4")
         let pipeline = FakePipeline(outputURL: output)
@@ -560,13 +606,103 @@ struct LivePipelineFailurePolicyTests {
 
         setup.camera.send(.stopRequested("Camera disconnected."))
         guard let event = await nextEvent.value,
-              case let .warning(message) = event else {
-            Issue.record("Combined camera loss should be downgraded to a warning")
+              case let .cameraDisabled(message) = event else {
+            Issue.record("Combined camera loss should disable only the camera")
             return
         }
         #expect(message.contains("continuing"))
         #expect(setup.screen.isRunning)
         #expect(try await setup.pipeline.stop() == setup.outputURL)
+    }
+
+    @Test
+    func combinedCameraCanStopAndRestartWhileScreenContinues() async throws {
+        let compositor = CameraPresenceVideoCompositor()
+        let setup = try makePipeline(
+            mode: .combined,
+            compositor: compositor
+        )
+        try await setup.pipeline.prepare()
+        try await setup.pipeline.start()
+
+        #expect(setup.screen.isRunning)
+        #expect(setup.camera.isRunning)
+        #expect(setup.camera.startCount == 1)
+
+        var presentationTime = CMClockGetTime(
+            CMClockGetHostTimeClock()
+        )
+        setup.camera.send(
+            try makeTestVideoSample(
+                width: 320,
+                height: 180,
+                presentationTime: presentationTime
+            )
+        )
+        setup.screen.send(
+            try makeTestVideoSample(
+                width: 640,
+                height: 360,
+                presentationTime: presentationTime
+            )
+        )
+        #expect(
+            await waitForPreview {
+                compositor.cameraPresence.last == true
+            }
+        )
+
+        try await setup.pipeline.setCameraEnabled(false)
+        #expect(setup.screen.isRunning)
+        #expect(!setup.camera.isRunning)
+        #expect(setup.camera.stopCount == 1)
+        presentationTime = CMTimeAdd(
+            presentationTime,
+            CMTime(value: 1, timescale: 30)
+        )
+        setup.screen.send(
+            try makeTestVideoSample(
+                width: 640,
+                height: 360,
+                presentationTime: presentationTime
+            )
+        )
+        #expect(
+            await waitForPreview {
+                compositor.cameraPresence.last == false
+            }
+        )
+
+        try await setup.pipeline.setCameraEnabled(true)
+        #expect(setup.screen.isRunning)
+        #expect(setup.camera.isRunning)
+        #expect(setup.camera.startCount == 2)
+        presentationTime = CMTimeAdd(
+            presentationTime,
+            CMTime(value: 1, timescale: 30)
+        )
+        setup.camera.send(
+            try makeTestVideoSample(
+                width: 320,
+                height: 180,
+                presentationTime: presentationTime
+            )
+        )
+        setup.screen.send(
+            try makeTestVideoSample(
+                width: 640,
+                height: 360,
+                presentationTime: presentationTime
+            )
+        )
+        #expect(
+            await waitForPreview {
+                compositor.cameraPresence.last == true
+            }
+        )
+
+        #expect(try await setup.pipeline.stop() == setup.outputURL)
+        #expect(setup.screen.startCount == 1)
     }
 
     @Test
@@ -698,6 +834,7 @@ struct LivePipelineFailurePolicyTests {
         screenKind: ScreenSelectionKind? = .display,
         systemAudio: Bool? = nil,
         microphone: Bool = true,
+        compositor: any VideoCompositor = NoopVideoCompositor(),
         diskSpaceChecker: MutableDiskSpaceChecker =
             MutableDiskSpaceChecker(capacity: 2_000_000_000)
     ) throws -> (
@@ -759,7 +896,7 @@ struct LivePipelineFailurePolicyTests {
             screenSource: screen,
             cameraSource: camera,
             microphoneSource: microphoneSource,
-            compositor: NoopVideoCompositor(),
+            compositor: compositor,
             audioMixer: NoopAudioMixer(),
             writer: EventRecordingWriter(outputURL: outputURL),
             diskSpaceChecker: diskSpaceChecker,
@@ -832,6 +969,7 @@ private final class PreviewFrameCollector: @unchecked Sendable {
 
 private final class EventScreenSource: ScreenSource, @unchecked Sendable {
     private let lock = NSLock()
+    private var videoHandler: (@Sendable (VideoSample) -> Void)?
     private var eventHandler: (@Sendable (PipelineEvent) -> Void)?
     private var isRunningStorage = false
     private var startCountStorage = 0
@@ -857,6 +995,7 @@ private final class EventScreenSource: ScreenSource, @unchecked Sendable {
         eventHandler: @escaping @Sendable (PipelineEvent) -> Void
     ) async throws {
         lock.withLock {
+            self.videoHandler = videoHandler
             self.eventHandler = eventHandler
             isRunningStorage = true
             startCountStorage += 1
@@ -867,6 +1006,7 @@ private final class EventScreenSource: ScreenSource, @unchecked Sendable {
     func stop() async {
         lock.withLock {
             isRunningStorage = false
+            videoHandler = nil
             eventHandler = nil
         }
     }
@@ -875,6 +1015,11 @@ private final class EventScreenSource: ScreenSource, @unchecked Sendable {
         let handler = lock.withLock { eventHandler }
         handler?(event)
     }
+
+    func send(_ sample: VideoSample) {
+        let handler = lock.withLock { videoHandler }
+        handler?(sample)
+    }
 }
 
 private final class EventCameraSource: CameraSource, @unchecked Sendable {
@@ -882,9 +1027,19 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
     private var videoHandler: (@Sendable (VideoSample) -> Void)?
     private var eventHandler: (@Sendable (PipelineEvent) -> Void)?
     private var startCountStorage = 0
+    private var stopCountStorage = 0
+    private var isRunningStorage = false
 
     var startCount: Int {
         lock.withLock { startCountStorage }
+    }
+
+    var stopCount: Int {
+        lock.withLock { stopCountStorage }
+    }
+
+    var isRunning: Bool {
+        lock.withLock { isRunningStorage }
     }
 
     func start(
@@ -898,6 +1053,7 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
             self.videoHandler = videoHandler
             self.eventHandler = eventHandler
             startCountStorage += 1
+            isRunningStorage = true
         }
     }
 
@@ -905,6 +1061,8 @@ private final class EventCameraSource: CameraSource, @unchecked Sendable {
         lock.withLock {
             videoHandler = nil
             eventHandler = nil
+            stopCountStorage += 1
+            isRunningStorage = false
         }
     }
 
@@ -1007,6 +1165,42 @@ private final class SolidVideoCompositor:
     }
 }
 
+private final class CameraPresenceVideoCompositor:
+    VideoCompositor,
+    @unchecked Sendable
+{
+    private let lock = NSLock()
+    private var cameraPresenceStorage = [Bool]()
+
+    var cameraPresence: [Bool] {
+        lock.withLock { cameraPresenceStorage }
+    }
+
+    func render(
+        screen: CVPixelBuffer?,
+        camera: CVPixelBuffer?,
+        screenCrop: NormalizedRect?,
+        mode: CaptureMode,
+        overlay: OverlayLayout,
+        outputSize: CGSize,
+        pool: CVPixelBufferPool
+    ) throws -> CVPixelBuffer {
+        lock.withLock {
+            cameraPresenceStorage.append(camera != nil)
+        }
+        var output: CVPixelBuffer?
+        let status = CVPixelBufferPoolCreatePixelBuffer(
+            kCFAllocatorDefault,
+            pool,
+            &output
+        )
+        guard status == kCVReturnSuccess, let output else {
+            throw RecorderError.noVideoFrames
+        }
+        return output
+    }
+}
+
 private final class EventRecordingWriter: RecordingWriter, @unchecked Sendable {
     let outputURL: URL
     let pixelBufferPool: CVPixelBufferPool?
@@ -1084,6 +1278,7 @@ private final class FakePipeline: RecordingPipeline, @unchecked Sendable {
         case start
         case pause
         case resume
+        case setCameraEnabled(Bool)
         case stop
         case cancel
     }
@@ -1132,6 +1327,10 @@ private final class FakePipeline: RecordingPipeline, @unchecked Sendable {
 
     func resume() async {
         append(.resume)
+    }
+
+    func setCameraEnabled(_ enabled: Bool) async throws {
+        append(.setCameraEnabled(enabled))
     }
 
     func stop() async throws -> URL {

@@ -106,11 +106,13 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         label: "com.charleswynn.localrecorder.pipeline",
         qos: .userInteractive
     )
+    private let cameraLifecycleLock = AsyncOperationLock()
     private let enqueueLock = NSLock()
     private let timeline: TimelineNormalizer
     private var latestCameraBuffer: CVPixelBuffer?
     private var isAcceptingSamples = false
     private var isPaused = false
+    private var isCameraEnabled = false
     private var audioFailureReported = false
     private var writerFailureReported = false
     private var screenFramePending = false
@@ -172,6 +174,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         processingQueue.sync {
             isAcceptingSamples = true
             isPaused = false
+            isCameraEnabled = request.configuration.mode.needsCamera
         }
 
         do {
@@ -195,13 +198,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
             }
 
             if request.configuration.mode.needsCamera {
-                try await cameraSource.start(
-                    cameraDeviceID: request.configuration.cameraDeviceID,
-                    maximumVideoSize: request.configuration.quality.maximumSize,
-                    framesPerSecond: request.configuration.quality.framesPerSecond,
-                    videoHandler: { [weak self] in self?.enqueueCamera($0) },
-                    eventHandler: { [weak self] in self?.handleSourceEvent($0) }
-                )
+                try await startCameraCapture()
             }
             if request.configuration.capturesMicrophone {
                 try await microphoneSource.start(
@@ -212,7 +209,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
             }
         } catch {
             await screenSource.stop()
-            await cameraSource.stop()
+            await stopCameraCapture()
             await microphoneSource.stop()
             writer.cancel()
             throw error
@@ -238,15 +235,69 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         }
     }
 
+    public func setCameraEnabled(_ enabled: Bool) async throws {
+        guard request.configuration.mode == .combined else {
+            throw RecorderError.invalidConfiguration(
+                "The camera can only be toggled during a Screen + Camera recording."
+            )
+        }
+        let state = processingQueue.sync {
+            (
+                isAcceptingSamples: isAcceptingSamples,
+                isCameraEnabled: isCameraEnabled
+            )
+        }
+        guard state.isAcceptingSamples else {
+            throw RecorderError.invalidConfiguration(
+                "The camera cannot be changed while the recording is stopping."
+            )
+        }
+        guard state.isCameraEnabled != enabled else { return }
+
+        if !enabled {
+            processingQueue.sync {
+                isCameraEnabled = false
+                latestCameraBuffer = nil
+            }
+            await stopCameraCapture()
+            return
+        }
+
+        do {
+            try await startCameraCapture(replacingExistingCapture: true)
+            let accepted = processingQueue.sync {
+                guard isAcceptingSamples else { return false }
+                isCameraEnabled = true
+                return true
+            }
+            guard accepted else {
+                throw RecorderError.invalidConfiguration(
+                    "The camera could not be restarted because the recording is stopping."
+                )
+            }
+        } catch {
+            processingQueue.sync {
+                isCameraEnabled = false
+                latestCameraBuffer = nil
+            }
+            await stopCameraCapture()
+            throw error
+        }
+    }
+
     public func stop() async throws -> URL {
         diskMonitor?.cancel()
         diskMonitor = nil
+        processingQueue.sync {
+            isAcceptingSamples = false
+            isCameraEnabled = false
+            latestCameraBuffer = nil
+        }
         await screenSource.stop()
-        await cameraSource.stop()
+        await stopCameraCapture()
         await microphoneSource.stop()
 
         try processingQueue.sync {
-            isAcceptingSamples = false
             for sample in try audioMixer.finish() {
                 _ = writer.appendAudio(sample)
             }
@@ -262,9 +313,11 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         diskMonitor = nil
         processingQueue.sync {
             isAcceptingSamples = false
+            isCameraEnabled = false
+            latestCameraBuffer = nil
         }
         await screenSource.stop()
-        await cameraSource.stop()
+        await stopCameraCapture()
         await microphoneSource.stop()
         writer.cancel()
         eventContinuation.finish()
@@ -289,7 +342,10 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
             guard isAcceptingSamples, !isPaused else { return }
             render(
                 screen: CMSampleBufferGetImageBuffer(sample.sampleBuffer),
-                camera: request.configuration.mode == .combined ? latestCameraBuffer : nil,
+                camera: request.configuration.mode == .combined
+                    && isCameraEnabled
+                    ? latestCameraBuffer
+                    : nil,
                 presentationTime: CMSampleBufferGetPresentationTimeStamp(sample.sampleBuffer)
             )
         }
@@ -318,7 +374,7 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
                     camera: camera,
                     presentationTime: CMSampleBufferGetPresentationTimeStamp(sample.sampleBuffer)
                 )
-            } else {
+            } else if isCameraEnabled {
                 latestCameraBuffer = camera
             }
         }
@@ -439,14 +495,50 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
         eventContinuation.yield(.fatal(failure.localizedDescription))
     }
 
+    private func startCameraCapture(
+        replacingExistingCapture: Bool = false
+    ) async throws {
+        let cameraSource = cameraSource
+        let cameraDeviceID = request.configuration.cameraDeviceID
+        let maximumVideoSize = request.configuration.quality.maximumSize
+        let framesPerSecond =
+            request.configuration.quality.framesPerSecond
+        try await cameraLifecycleLock.perform { [weak self] in
+            if replacingExistingCapture {
+                await cameraSource.stop()
+            }
+            try await cameraSource.start(
+                cameraDeviceID: cameraDeviceID,
+                maximumVideoSize: maximumVideoSize,
+                framesPerSecond: framesPerSecond,
+                videoHandler: { [weak self] in self?.enqueueCamera($0) },
+                eventHandler: { [weak self] in
+                    self?.handleSourceEvent($0)
+                }
+            )
+        }
+    }
+
+    private func stopCameraCapture() async {
+        let cameraSource = cameraSource
+        await cameraLifecycleLock.perform {
+            await cameraSource.stop()
+        }
+    }
+
     private func handleSourceEvent(_ event: PipelineEvent) {
         if case let .stopRequested(message) = event,
            request.configuration.mode == .combined,
            message.localizedCaseInsensitiveContains("camera") {
             processingQueue.async { [weak self] in
+                self?.isCameraEnabled = false
                 self?.latestCameraBuffer = nil
             }
-            eventContinuation.yield(.warning("\(message) Screen recording is continuing."))
+            eventContinuation.yield(
+                .cameraDisabled(
+                    "\(message) Screen recording is continuing."
+                )
+            )
             return
         }
         eventContinuation.yield(event)
@@ -470,6 +562,42 @@ public final class LiveRecordingPipeline: RecordingPipeline, @unchecked Sendable
                 }
             }
         }
+    }
+}
+
+private actor AsyncOperationLock {
+    private var isLocked = false
+    private var waiters = [CheckedContinuation<Void, Never>]()
+
+    func perform(
+        _ operation: @escaping @Sendable () async throws -> Void
+    ) async rethrows {
+        await acquire()
+        do {
+            try await operation()
+            release()
+        } catch {
+            release()
+            throw error
+        }
+    }
+
+    private func acquire() async {
+        if !isLocked {
+            isLocked = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        guard !waiters.isEmpty else {
+            isLocked = false
+            return
+        }
+        waiters.removeFirst().resume()
     }
 }
 

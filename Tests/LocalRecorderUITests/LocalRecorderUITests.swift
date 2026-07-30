@@ -185,4 +185,26 @@ final class LocalRecorderUITests: XCTestCase {
                 .waitForExistence(timeout: 2)
         )
     }
+
+    @MainActor
+    func testCombinedRecordingCameraCanBeTurnedOffAndBackOn() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ApplePersistenceIgnoreState", "YES",
+            "--ui-testing-combined-recording-controller"
+        ]
+        app.launch()
+
+        let turnOff = app.buttons["Turn Camera Off"]
+        XCTAssertTrue(turnOff.waitForExistence(timeout: 5))
+        turnOff.click()
+
+        let turnOn = app.buttons["Turn Camera On"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 2))
+        turnOn.click()
+        XCTAssertTrue(
+            app.buttons["Turn Camera Off"]
+                .waitForExistence(timeout: 2)
+        )
+    }
 }

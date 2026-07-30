@@ -208,6 +208,37 @@ private struct RecordingControllerView: View {
                             : "Show the live camera preview."
                     )
                 }
+                if model.configuration.mode == .combined {
+                    Button {
+                        model.toggleCombinedRecordingCamera()
+                    } label: {
+                        if model.isChangingCombinedCamera {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(
+                                systemName: model.snapshot.isCameraEnabled
+                                    ? "video.slash.fill"
+                                    : "video.fill"
+                            )
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(model.isChangingCombinedCamera)
+                    .accessibilityLabel(
+                        model.snapshot.isCameraEnabled
+                            ? "Turn Camera Off"
+                            : "Turn Camera On"
+                    )
+                    .accessibilityIdentifier(
+                        "toggle-combined-recording-camera"
+                    )
+                    .help(
+                        model.snapshot.isCameraEnabled
+                            ? "Remove the camera from the recording. Screen capture continues."
+                            : "Add the camera back to the recording."
+                    )
+                }
                 Button {
                     model.togglePause()
                 } label: {

@@ -36,6 +36,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var systemAudioLevel = 0.0
     @Published private(set) var recordingCameraPreview: NSImage?
     @Published private(set) var isRecordingCameraPreviewVisible = true
+    @Published private(set) var isChangingCombinedCamera = false
     @Published private(set) var isChoosingScreen = false
 
     let cameraPreview = CameraPreviewController()
@@ -67,6 +68,9 @@ final class AppModel: ObservableObject {
         return arguments.contains("--ui-testing-ready")
             || arguments.contains("--ui-testing-unready")
             || arguments.contains("--ui-testing-recording-controller")
+            || arguments.contains(
+                "--ui-testing-combined-recording-controller"
+            )
             || arguments.contains("--ui-testing-selecting")
             || arguments.contains("--ui-testing-window-content")
 #else
@@ -379,6 +383,7 @@ final class AppModel: ObservableObject {
         elapsedSeconds = 0
         recordingCameraPreview = nil
         isRecordingCameraPreviewVisible = true
+        isChangingCombinedCamera = false
         recordTask?.cancel()
         recordTask = Task { [weak self] in
             guard let self else { return }
@@ -447,6 +452,38 @@ final class AppModel: ObservableObject {
         }
         isRecordingCameraPreviewVisible.toggle()
         controllerWindow.show(model: self)
+    }
+
+    func toggleCombinedRecordingCamera() {
+        guard configuration.mode == .combined,
+              [.recording, .paused].contains(snapshot.phase),
+              !isChangingCombinedCamera else {
+            return
+        }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains(
+            "--ui-testing-combined-recording-controller"
+        ) {
+            snapshot.isCameraEnabled.toggle()
+            controllerWindow.show(model: self)
+            return
+        }
+#endif
+        let enablesCamera = !snapshot.isCameraEnabled
+        isChangingCombinedCamera = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer {
+                isChangingCombinedCamera = false
+            }
+            do {
+                try await engine.setCameraEnabled(enablesCamera)
+            } catch {
+                errorMessage = enablesCamera
+                    ? "The camera could not be turned on: \(error.localizedDescription)"
+                    : "The camera could not be turned off: \(error.localizedDescription)"
+            }
+        }
     }
 
     func stopRecording() {
@@ -538,6 +575,7 @@ final class AppModel: ObservableObject {
             timerTask?.cancel()
             recordingCameraPreview = nil
             isRecordingCameraPreviewVisible = true
+            isChangingCombinedCamera = false
             controllerWindow.closeAndRestore()
             Task {
                 await refreshLibrary()
@@ -547,6 +585,7 @@ final class AppModel: ObservableObject {
             timerTask?.cancel()
             recordingCameraPreview = nil
             isRecordingCameraPreviewVisible = true
+            isChangingCombinedCamera = false
             controllerWindow.closeAndRestore()
             errorMessage = snapshot.message
             Task { await updateCameraPreview() }
@@ -555,6 +594,7 @@ final class AppModel: ObservableObject {
             elapsedSeconds = 0
             recordingCameraPreview = nil
             isRecordingCameraPreviewVisible = true
+            isChangingCombinedCamera = false
             controllerWindow.closeAndRestore()
             Task { await updateCameraPreview() }
         case .selecting, .countingDown:
@@ -991,12 +1031,16 @@ final class AppModel: ObservableObject {
         let isControllerTest = arguments.contains(
             "--ui-testing-recording-controller"
         )
+        let isCombinedControllerTest = arguments.contains(
+            "--ui-testing-combined-recording-controller"
+        )
         let isSelecting = arguments.contains("--ui-testing-selecting")
         let isWindowContentTest = arguments.contains(
             "--ui-testing-window-content"
         )
         let isReady = arguments.contains("--ui-testing-ready")
             || isControllerTest
+            || isCombinedControllerTest
             || isSelecting
             || isWindowContentTest
         let isUnready = arguments.contains("--ui-testing-unready")
@@ -1005,7 +1049,7 @@ final class AppModel: ObservableObject {
         configuration = RecordingConfiguration(
             mode: isSelecting || isWindowContentTest
                 ? .screen
-                : .camera,
+                : (isCombinedControllerTest ? .combined : .camera),
             cameraDeviceID: "ui-test-camera",
             microphoneDeviceID: "ui-test-microphone",
             capturesSystemAudio: false,
@@ -1081,7 +1125,7 @@ final class AppModel: ObservableObject {
                 fileSize: 1_024
             )
         ]
-        if isControllerTest {
+        if isControllerTest || isCombinedControllerTest {
             let fixture = CIImage(
                 color: CIColor(
                     red: 0.12,
@@ -1101,7 +1145,10 @@ final class AppModel: ObservableObject {
                     size: NSSize(width: 640, height: 360)
                 )
             }
-            snapshot = RecordingSnapshot(phase: .recording)
+            snapshot = RecordingSnapshot(
+                phase: .recording,
+                isCameraEnabled: true
+            )
             elapsedSeconds = 7
             isRecordingCameraPreviewVisible = true
             controllerWindow.show(model: self)

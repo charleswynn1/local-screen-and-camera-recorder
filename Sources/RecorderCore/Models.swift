@@ -465,17 +465,20 @@ public struct RecordingSnapshot: Equatable, Sendable {
     public var countdown: Int?
     public var outputURL: URL?
     public var message: String?
+    public var isCameraEnabled: Bool
 
     public init(
         phase: RecordingPhase,
         countdown: Int? = nil,
         outputURL: URL? = nil,
-        message: String? = nil
+        message: String? = nil,
+        isCameraEnabled: Bool = false
     ) {
         self.phase = phase
         self.countdown = countdown
         self.outputURL = outputURL
         self.message = message
+        self.isCameraEnabled = isCameraEnabled
     }
 
     public static let idle = RecordingSnapshot(phase: .idle)
@@ -602,6 +605,7 @@ public struct RecordingRequest: @unchecked Sendable {
 
 public enum PipelineEvent: Equatable, Sendable {
     case warning(String)
+    case cameraDisabled(String)
     case stopRequested(String)
     case fatal(String)
 }

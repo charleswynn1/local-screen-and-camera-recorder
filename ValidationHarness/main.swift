@@ -192,6 +192,7 @@ private final class HarnessPipeline: RecordingPipeline, @unchecked Sendable {
     func start() async throws {}
     func pause() async {}
     func resume() async {}
+    func setCameraEnabled(_ enabled: Bool) async throws {}
 
     func stop() async throws -> URL {
         continuation.finish()

@@ -78,7 +78,10 @@ public actor RecordingEngine {
             try await pipeline.start()
             observeEvents(from: pipeline)
             observePreviewFrames(from: pipeline)
-            transition(.recording)
+            transition(
+                .recording,
+                cameraEnabled: request.configuration.mode.needsCamera
+            )
         } catch is CancellationError {
             previewTask?.cancel()
             previewTask = nil
@@ -116,6 +119,34 @@ public actor RecordingEngine {
         guard snapshot.phase == .paused, let pipeline else { return }
         await pipeline.resume()
         transition(.recording)
+    }
+
+    public func setCameraEnabled(_ enabled: Bool) async throws {
+        guard [.recording, .paused].contains(snapshot.phase),
+              let pipeline else {
+            throw RecorderError.invalidConfiguration(
+                "Camera controls are only available during an active recording."
+            )
+        }
+        do {
+            try await pipeline.setCameraEnabled(enabled)
+            guard [.recording, .paused].contains(snapshot.phase) else {
+                return
+            }
+            transition(
+                snapshot.phase,
+                cameraEnabled: enabled
+            )
+        } catch {
+            if [.recording, .paused].contains(snapshot.phase) {
+                transition(
+                    snapshot.phase,
+                    message: error.localizedDescription,
+                    cameraEnabled: false
+                )
+            }
+            throw error
+        }
     }
 
     @discardableResult
@@ -183,6 +214,12 @@ public actor RecordingEngine {
         switch event {
         case let .warning(message):
             transition(snapshot.phase, message: message)
+        case let .cameraDisabled(message):
+            transition(
+                snapshot.phase,
+                message: message,
+                cameraEnabled: false
+            )
         case let .stopRequested(message):
             _ = try? await stop(message: message)
         case let .fatal(message):
@@ -198,13 +235,24 @@ public actor RecordingEngine {
         _ phase: RecordingPhase,
         countdown: Int? = nil,
         outputURL: URL? = nil,
-        message: String? = nil
+        message: String? = nil,
+        cameraEnabled: Bool? = nil
     ) {
+        let keepsActiveCameraState = [
+            RecordingPhase.countingDown,
+            .recording,
+            .paused,
+            .finalizing
+        ].contains(phase)
         snapshot = RecordingSnapshot(
             phase: phase,
             countdown: countdown,
             outputURL: outputURL,
-            message: message
+            message: message,
+            isCameraEnabled: cameraEnabled
+                ?? (keepsActiveCameraState
+                    ? snapshot.isCameraEnabled
+                    : false)
         )
         updateHandler(snapshot)
     }
