@@ -30,6 +30,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var systemAudioLevel = 0.0
     @Published private(set) var recordingCameraPreview: NSImage?
     @Published private(set) var isRecordingCameraPreviewVisible = true
+    @Published private(set) var isChoosingScreen = false
 
     let cameraPreview = CameraPreviewController()
     private let microphoneMeter = MicrophoneMeterController()
@@ -162,8 +163,10 @@ final class AppModel: ObservableObject {
 
     func selectMode(_ mode: CaptureMode) {
         guard configuration.mode != mode else { return }
-        if snapshot.phase == .selecting {
+        if isChoosingScreen {
             picker.cancelPending()
+        }
+        if snapshot.phase == .selecting {
             Task { await engine.endSelection() }
         }
         configuration.applyDefaults(for: mode)
@@ -206,6 +209,10 @@ final class AppModel: ObservableObject {
     }
 
     func chooseScreen(_ kind: ScreenSelectionKind) async {
+        guard !isChoosingScreen else { return }
+        isChoosingScreen = true
+        defer { isChoosingScreen = false }
+
         errorMessage = nil
         do {
             guard await ensurePermission(.screen) else {
@@ -216,6 +223,9 @@ final class AppModel: ObservableObject {
                 kind: kind,
                 excludingBundleID: Bundle.main.bundleIdentifier
             )
+            guard configuration.mode.needsScreen else {
+                throw RecorderError.cancelled
+            }
             let target: ScreenCaptureTarget
             if kind == .region {
                 let rect = try await regionSelector.selectRegion(for: picked)

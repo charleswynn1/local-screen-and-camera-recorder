@@ -91,6 +91,10 @@ struct RecordView: View {
                             Label(kind.title, systemImage: kind.systemImage)
                                 .frame(maxWidth: .infinity)
                         }
+                        .disabled(
+                            model.isChoosingScreen
+                                || model.snapshot.phase == .selecting
+                        )
                     }
                 }
                 if let selection = model.configuration.screenSelection {

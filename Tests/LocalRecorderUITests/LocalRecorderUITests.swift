@@ -85,6 +85,9 @@ final class LocalRecorderUITests: XCTestCase {
         let recordButton = app.buttons["Start Recording"]
         XCTAssertTrue(recordButton.waitForExistence(timeout: 5))
         XCTAssertFalse(recordButton.isEnabled)
+        XCTAssertFalse(app.buttons["Full Screen"].isEnabled)
+        XCTAssertFalse(app.buttons["Window"].isEnabled)
+        XCTAssertFalse(app.buttons["Region"].isEnabled)
 
         app.buttons["Camera Only"].click()
 

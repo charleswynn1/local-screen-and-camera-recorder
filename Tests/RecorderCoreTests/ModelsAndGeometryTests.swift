@@ -1,6 +1,8 @@
 import CoreGraphics
 import CoreMedia
+import Darwin
 import Foundation
+@preconcurrency import ScreenCaptureKit
 @testable import RecorderCore
 import Testing
 
@@ -10,6 +12,23 @@ struct RecorderCoreTestPlan {}
 extension RecorderCoreTestPlan {
 @Suite("Models and geometry")
 struct ModelsAndGeometryTests {
+    @Test
+    @MainActor
+    func screenPickerCancellationCallbackCanArriveOffMainExecutor() async {
+        let picker = ScreenContentPicker()
+        let callbackRanOffMain = await Task.detached {
+            let ranOffMain = pthread_main_np() == 0
+            picker.contentSharingPicker(
+                SCContentSharingPicker.shared,
+                didCancelFor: nil
+            )
+            return ranOffMain
+        }.value
+
+        #expect(callbackRanOffMain)
+        await Task.yield()
+    }
+
     @Test
     func permissionGrantRoutesFirstRequestAndDeniedRecoveryDifferently() {
         #expect(PrivacySettingsLink.grantAction(for: .notDetermined) == .request)

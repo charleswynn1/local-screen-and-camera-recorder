@@ -2,8 +2,12 @@
 import AppKit
 import Foundation
 
+private struct UncheckedSendableBox<Value>: @unchecked Sendable {
+    let value: Value
+}
+
 @MainActor
-public final class ScreenContentPicker: NSObject, @preconcurrency SCContentSharingPickerObserver {
+public final class ScreenContentPicker: NSObject, SCContentSharingPickerObserver {
     private var continuation: CheckedContinuation<ScreenCaptureTarget, Error>?
     private var requestedKind: ScreenSelectionKind = .display
     private let picker = SCContentSharingPicker.shared
@@ -42,18 +46,27 @@ public final class ScreenContentPicker: NSObject, @preconcurrency SCContentShari
         finish(.failure(RecorderError.cancelled))
     }
 
-    public func contentSharingPicker(
+    nonisolated public func contentSharingPicker(
         _ picker: SCContentSharingPicker,
         didCancelFor stream: SCStream?
     ) {
-        finish(.failure(RecorderError.cancelled))
+        Task { @MainActor [weak self] in
+            self?.finish(.failure(RecorderError.cancelled))
+        }
     }
 
-    public func contentSharingPicker(
+    nonisolated public func contentSharingPicker(
         _ picker: SCContentSharingPicker,
         didUpdateWith filter: SCContentFilter,
         for stream: SCStream?
     ) {
+        let filter = UncheckedSendableBox(value: filter)
+        Task { @MainActor [weak self] in
+            self?.handleUpdate(filter.value)
+        }
+    }
+
+    private func handleUpdate(_ filter: SCContentFilter) {
         let selection: ScreenSelection
         switch requestedKind {
         case .window:
@@ -136,8 +149,15 @@ public final class ScreenContentPicker: NSObject, @preconcurrency SCContentShari
             + abs(screen.backingScaleFactor - CGFloat(filter.pointPixelScale)) * 100
     }
 
-    public func contentSharingPickerStartDidFailWithError(_ error: any Error) {
-        finish(.failure(error))
+    nonisolated public func contentSharingPickerStartDidFailWithError(
+        _ error: any Error
+    ) {
+        let description = error.localizedDescription
+        Task { @MainActor [weak self] in
+            self?.finish(
+                .failure(RecorderError.captureFailed(description))
+            )
+        }
     }
 
     private func finish(_ result: Result<ScreenCaptureTarget, Error>) {
